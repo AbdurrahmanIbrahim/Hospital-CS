@@ -792,8 +792,8 @@ if($run) while ($row = $run->fetch_assoc()) $admission_history[] = $row;
                             </td>
                             <td>
                                 <div style="display:flex;gap:6px;flex-wrap:wrap;">
-                                    <a href="../admission/reports.php?id=<?= $adm['id'] ?>" style="color:#2563eb;font-size:12px;text-decoration:none;font-weight:600;">Reports</a>
-                                    <a href="../admission/billing.php?id=<?= $adm['id'] ?>" style="color:#7c3aed;font-size:12px;text-decoration:none;font-weight:600;">Billing</a>
+                                    <a href="../admission/reports.php?id=<?= $adm['id'] ?>" class="btn-secondary" style="padding:5px 12px;font-size:12px;text-decoration:none;">Reports</a>
+                                    <a href="../admission/billing.php?id=<?= $adm['id'] ?>" class="btn-secondary" style="padding:5px 12px;font-size:12px;text-decoration:none;">Billing</a>
                                 </div>
                             </td>
                         </tr>

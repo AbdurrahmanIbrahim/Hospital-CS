@@ -84,6 +84,15 @@ $days = $admitted_date->diff($now)->days + 1;
 
 // Check if all items are paid
 $all_paid = ($unpaid_total == 0 && count($billing_items) > 0);
+
+// Fetch drugs and tests for dynamic billing form
+$allDrugs = [];
+$run = $db->query("SELECT id, drug_name, selling_price, dosage_form, strength FROM drugs WHERE status = 1 ORDER BY drug_name ASC");
+if($run) while($row = $run->fetch_assoc()) $allDrugs[] = $row;
+
+$allTests = [];
+$run = $db->query("SELECT id, name, amount, specimen, type FROM tests WHERE status = 1 ORDER BY name ASC");
+if($run) while($row = $run->fetch_assoc()) $allTests[] = $row;
 ?>
 
 <!DOCTYPE html>
@@ -156,6 +165,48 @@ $all_paid = ($unpaid_total == 0 && count($billing_items) > 0);
         .btn-cancel { background: #f1f5f9; color: #475569; }
         .btn-confirm { background: #2563eb; color: white; }
         .btn-confirm:hover { background: #1d4ed8; }
+        .billing-tab {
+            padding: 8px 20px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            font-size: 14px;
+            font-weight: 600;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .billing-tab.active {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+        }
+        .billing-tab:hover:not(.active) { border-color: #9ca3af; }
+        .billing-item-row {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border-bottom: 1px solid #f3f4f6;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .billing-item-row:hover { background: #f9fafb; }
+        .billing-item-row:last-child { border-bottom: none; }
+        .billing-item-row input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; flex-shrink: 0; }
+        .billing-item-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+        .billing-item-info strong { font-size: 14px; color: #111827; }
+        .billing-item-info small { font-size: 12px; color: #6b7280; }
+        .billing-qty-input {
+            width: 70px;
+            padding: 6px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 13px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+        .billing-qty-input:disabled { background: #f3f4f6; opacity: 0.5; }
     </style>
 </head>
 
@@ -264,26 +315,86 @@ $all_paid = ($unpaid_total == 0 && count($billing_items) > 0);
             <h2>Add Billing Item</h2>
         </div>
         <div class="card-body" style="padding: 24px;">
-            <form method="POST" action="add_billing.php" style="display: flex; gap: 12px; flex-wrap: wrap; align-items: end;">
-                <input type="hidden" name="admission_id" value="<?= $admission_id ?>">
-                <div class="form-group" style="margin-bottom:0;flex:2;min-width:200px;">
-                    <label>Description *</label>
-                    <input type="text" name="description" placeholder="e.g. Dressing, Oxygen, etc." required>
-                </div>
-                <div class="form-group" style="margin-bottom:0;flex:1;min-width:120px;">
-                    <label>Amount (&#8358;) *</label>
-                    <input type="number" name="amount" step="0.01" min="0.01" placeholder="0.00" required>
-                </div>
-                <div class="form-group" style="margin-bottom:0;flex:1;min-width:150px;">
-                    <label>Type *</label>
-                    <select name="billing_type" required>
-                        <option value="3">Other</option>
-                        <option value="2">Drug</option>
-                        <option value="1">Room</option>
-                    </select>
-                </div>
-                <button type="submit" class="btn-primary" style="height:44px;white-space:nowrap;">Add Item</button>
-            </form>
+            <!-- Billing Type Tabs -->
+            <div style="display:flex;gap:8px;margin-bottom:20px;">
+                <button type="button" class="billing-tab active" data-tab="drug" onclick="switchBillingTab('drug')">Drug</button>
+                <button type="button" class="billing-tab" data-tab="lab" onclick="switchBillingTab('lab')">Lab Test</button>
+                <button type="button" class="billing-tab" data-tab="other" onclick="switchBillingTab('other')">Other</button>
+            </div>
+
+            <!-- Drug Tab -->
+            <div id="tab-drug" class="billing-tab-content">
+                <form method="POST" action="add_billing.php">
+                    <input type="hidden" name="admission_id" value="<?= $admission_id ?>">
+                    <input type="hidden" name="billing_mode" value="drug">
+                    <div class="form-group">
+                        <label>Search Drug</label>
+                        <input type="text" id="drugBillingSearch" placeholder="Type to search drugs..." oninput="filterBillingDrugs()">
+                    </div>
+                    <div class="billing-items-grid" id="drugBillingGrid" style="max-height:250px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:8px;">
+                        <?php foreach($allDrugs as $d): ?>
+                        <label class="billing-item-row drug-billing-row" data-name="<?= strtolower($d['drug_name']) ?>">
+                            <input type="checkbox" name="drugs[<?= $d['id'] ?>][selected]" value="1" class="drug-billing-check" data-price="<?= $d['selling_price'] ?>" data-id="<?= $d['id'] ?>" onchange="toggleDrugQty(this)">
+                            <span class="billing-item-info">
+                                <strong><?= htmlspecialchars($d['drug_name']) ?></strong>
+                                <small><?= htmlspecialchars($d['dosage_form']) ?> - <?= htmlspecialchars($d['strength']) ?> | &#8358;<?= number_format($d['selling_price'], 2) ?></small>
+                            </span>
+                            <input type="number" name="drugs[<?= $d['id'] ?>][qty]" class="billing-qty-input" placeholder="Qty" min="1" value="1" disabled>
+                        </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+                        <span style="font-weight:600;font-size:15px;">Total: &#8358;<span id="drugBillingTotal">0.00</span></span>
+                        <button type="submit" class="btn-primary" style="padding:10px 24px;">Add Drug Charges</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Lab Tab -->
+            <div id="tab-lab" class="billing-tab-content" style="display:none;">
+                <form method="POST" action="add_billing.php">
+                    <input type="hidden" name="admission_id" value="<?= $admission_id ?>">
+                    <input type="hidden" name="billing_mode" value="lab">
+                    <div class="form-group">
+                        <label>Search Lab Test</label>
+                        <input type="text" id="labBillingSearch" placeholder="Type to search lab tests..." oninput="filterBillingLabs()">
+                    </div>
+                    <div class="billing-items-grid" id="labBillingGrid" style="max-height:250px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:8px;">
+                        <?php foreach($allTests as $t): ?>
+                        <label class="billing-item-row lab-billing-row" data-name="<?= strtolower($t['name']) ?>">
+                            <input type="checkbox" name="tests[]" value="<?= $t['id'] ?>" class="lab-billing-check" data-price="<?= $t['amount'] ?>" onchange="updateLabTotal()">
+                            <span class="billing-item-info">
+                                <strong><?= htmlspecialchars($t['name']) ?></strong>
+                                <small><?= htmlspecialchars($t['specimen']) ?> - <?= htmlspecialchars($t['type']) ?> | &#8358;<?= number_format($t['amount'], 2) ?></small>
+                            </span>
+                        </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+                        <span style="font-weight:600;font-size:15px;">Total: &#8358;<span id="labBillingTotal">0.00</span></span>
+                        <button type="submit" class="btn-primary" style="padding:10px 24px;">Add Lab Charges</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Other Tab -->
+            <div id="tab-other" class="billing-tab-content" style="display:none;">
+                <form method="POST" action="add_billing.php">
+                    <input type="hidden" name="admission_id" value="<?= $admission_id ?>">
+                    <input type="hidden" name="billing_mode" value="other">
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: end;">
+                        <div class="form-group" style="margin-bottom:0;flex:2;min-width:200px;">
+                            <label>Description *</label>
+                            <input type="text" name="description" placeholder="e.g. Dressing, Oxygen, Consultation, etc." required>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;flex:1;min-width:120px;">
+                            <label>Amount (&#8358;) *</label>
+                            <input type="number" name="amount" step="0.01" min="0.01" placeholder="0.00" required>
+                        </div>
+                        <button type="submit" class="btn-primary" style="height:44px;white-space:nowrap;">Add Item</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
     <?php endif; ?>
@@ -319,6 +430,8 @@ $all_paid = ($unpaid_total == 0 && count($billing_items) > 0);
                                 <span style="background:#dbeafe;color:#2563eb;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;">Room</span>
                             <?php elseif($item['billing_type'] == 2): ?>
                                 <span style="background:#dcfce7;color:#15803d;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;">Drug</span>
+                            <?php elseif($item['billing_type'] == 3 && strpos($item['description'], 'Lab:') === 0): ?>
+                                <span style="background:#ede9fe;color:#7c3aed;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;">Lab</span>
                             <?php else: ?>
                                 <span style="background:#f1f5f9;color:#64748b;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;">Other</span>
                             <?php endif; ?>
@@ -414,6 +527,63 @@ $all_paid = ($unpaid_total == 0 && count($billing_items) > 0);
 </main>
 
 <script>
+/* === Billing Tab Switching === */
+function switchBillingTab(tab) {
+    document.querySelectorAll('.billing-tab').forEach(function(t){ t.classList.remove('active'); });
+    document.querySelectorAll('.billing-tab-content').forEach(function(c){ c.style.display = 'none'; });
+    document.querySelector('.billing-tab[data-tab="'+tab+'"]').classList.add('active');
+    document.getElementById('tab-'+tab).style.display = 'block';
+}
+
+/* === Drug Search Filter === */
+function filterBillingDrugs() {
+    var query = document.getElementById('drugBillingSearch').value.toLowerCase();
+    document.querySelectorAll('.drug-billing-row').forEach(function(row){
+        row.style.display = row.getAttribute('data-name').indexOf(query) !== -1 ? 'flex' : 'none';
+    });
+}
+
+/* === Lab Search Filter === */
+function filterBillingLabs() {
+    var query = document.getElementById('labBillingSearch').value.toLowerCase();
+    document.querySelectorAll('.lab-billing-row').forEach(function(row){
+        row.style.display = row.getAttribute('data-name').indexOf(query) !== -1 ? 'flex' : 'none';
+    });
+}
+
+/* === Toggle Drug Qty & Update Total === */
+function toggleDrugQty(checkbox) {
+    var qtyInput = checkbox.closest('.billing-item-row').querySelector('.billing-qty-input');
+    qtyInput.disabled = !checkbox.checked;
+    if (!checkbox.checked) qtyInput.value = 1;
+    updateDrugTotal();
+}
+
+function updateDrugTotal() {
+    var total = 0;
+    document.querySelectorAll('.drug-billing-check:checked').forEach(function(cb){
+        var price = parseFloat(cb.getAttribute('data-price'));
+        var qty = parseInt(cb.closest('.billing-item-row').querySelector('.billing-qty-input').value) || 1;
+        total += price * qty;
+    });
+    document.getElementById('drugBillingTotal').textContent = total.toLocaleString(undefined, {minimumFractionDigits: 2});
+}
+
+/* === Lab Total === */
+function updateLabTotal() {
+    var total = 0;
+    document.querySelectorAll('.lab-billing-check:checked').forEach(function(cb){
+        total += parseFloat(cb.getAttribute('data-price'));
+    });
+    document.getElementById('labBillingTotal').textContent = total.toLocaleString(undefined, {minimumFractionDigits: 2});
+}
+
+/* === Listen for qty changes === */
+document.querySelectorAll('.billing-qty-input').forEach(function(input){
+    input.addEventListener('input', updateDrugTotal);
+});
+
+/* === Payment Modal === */
 function openPayModal(billingId, description, amount) {
     document.getElementById('modal_billing_id').value = billingId;
     document.getElementById('modal_desc').value = description;
