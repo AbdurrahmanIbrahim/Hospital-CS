@@ -82,26 +82,8 @@ $admission_id = $db->insert_id;
 
 // Create initial room billing entry (Day 1)
 $room_price = $room_info['room_price'];
-$db->query("INSERT INTO admission_billing (admission_id, description, amount, billing_type, created_at)
-            VALUES ('$admission_id', 'Initial room charge - Day 1', '$room_price', 1, NOW())");
-
-// Get patient scheme for discount
-$patient = $db->query("SELECT scheme_type FROM users WHERE id = '$patient_id'")->fetch_assoc();
-$discount = 0;
-if (!empty($patient['scheme_type'])) {
-    $scheme = $db->query("SELECT discount_fee FROM schemes WHERE id = '".$patient['scheme_type']."' AND status = 1");
-    if ($scheme->num_rows > 0) {
-        $discount = $scheme->fetch_assoc()['discount_fee'];
-    }
-}
-
-$discount_amount = $room_price * ($discount / 100);
-$net_amount = $room_price - $discount_amount;
-
-// Create payment record for admission
-$receipt_num = generateReceiptNumber($db);
-$db->query("INSERT INTO payments (patient_id, appointment_id, user_id, amount, discount, net_amount, purpose, record_date, status, reciept_num, note)
-            VALUES ('$patient_id', '$appointment_id', '$user_id', '$room_price', '$discount_amount', '$net_amount', 4, NOW(), 0, '$receipt_num', 'Admission - Room Charge Day 1')");
+$db->query("INSERT INTO admission_billing (admission_id, description, amount, billing_type, paid, created_at)
+            VALUES ('$admission_id', 'Room charge - Day 1', '$room_price', 1, 0, NOW())");
 
 $_SESSION['success'] = 'Patient admitted successfully!';
 header('Location: view.php');

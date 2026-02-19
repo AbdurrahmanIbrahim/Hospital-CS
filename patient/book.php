@@ -43,10 +43,10 @@ $patient = $patientCheck->fetch_assoc();
    CHECK ACTIVE APPOINTMENT
 ========================= */
 $activeCheck = $db->query("
-    SELECT id 
-    FROM appointments 
-    WHERE patient_id='$patient_id' 
-    AND status=0
+    SELECT id
+    FROM appointments
+    WHERE patient_id='$patient_id'
+    AND (status=0 OR status=1)
 ");
 
 if ($activeCheck->num_rows > 0) {

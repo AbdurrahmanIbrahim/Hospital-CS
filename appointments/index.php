@@ -68,6 +68,7 @@ elseif (!empty($start_date) && !empty($end_date)) {
        $room_id = $roomInfo['room_id'];
 
        $where .=" AND a.room_id = '$room_id'";
+       $where .=" AND a.status = 1";
 
 
 

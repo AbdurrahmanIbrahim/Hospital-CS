@@ -548,8 +548,8 @@ function processRoomBilling($admission_id){
             $bill_date->modify('+' . ($i + 1) . ' days');
             $desc = $db->real_escape_string('Room stay charge - ' . $bill_date->format('d M Y'));
             $db->query("
-                INSERT INTO admission_billing (admission_id, description, amount, billing_type, created_at)
-                VALUES ('$admission_id', '$desc', '$price_per_day', 1, '".$bill_date->format('Y-m-d H:i:s')."')
+                INSERT INTO admission_billing (admission_id, description, amount, billing_type, paid, created_at)
+                VALUES ('$admission_id', '$desc', '$price_per_day', 1, 0, '".$bill_date->format('Y-m-d H:i:s')."')
             ");
         }
         $new_last_billed = clone $last_billed;

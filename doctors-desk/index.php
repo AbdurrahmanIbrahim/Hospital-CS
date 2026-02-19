@@ -178,8 +178,27 @@ while ($row = $run->fetch_assoc()) {
 
 // $myTests now contains all lab tests for that appointment
 
-
-
+// Fetch admission history for this patient
+$admission_history = [];
+$sql = "
+    SELECT
+        a.*,
+        r.room_name,
+        r.room_price,
+        w.ward_name,
+        d.name AS doctor_name,
+        (SELECT COUNT(*) FROM admission_reports ar WHERE ar.admission_id = a.id) AS report_count,
+        (SELECT COALESCE(SUM(ab.amount), 0) FROM admission_billing ab WHERE ab.admission_id = a.id) AS total_bill,
+        (SELECT COALESCE(SUM(ab.amount), 0) FROM admission_billing ab WHERE ab.admission_id = a.id AND ab.paid = 1) AS paid_amount
+    FROM admissions a
+    INNER JOIN rooms r ON r.id = a.room_id
+    LEFT JOIN wards w ON w.id = r.ward
+    LEFT JOIN users d ON d.id = a.doctor_id
+    WHERE a.patient_id = '$patient_id'
+    ORDER BY a.admission_date DESC
+";
+$run = $db->query($sql);
+if($run) while ($row = $run->fetch_assoc()) $admission_history[] = $row;
 
 ?>
 
@@ -701,6 +720,96 @@ while ($row = $run->fetch_assoc()) {
     </div>
 </div>
 
+<!-- Admission History Card -->
+<div class="card">
+    <div class="card-header">
+        <h2>Admission History</h2>
+        <div class="card-actions">
+            <span class="badge badge-secondary">Total: <?= count($admission_history) ?> record(s)</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Room / Bed</th>
+                        <th>Admitted</th>
+                        <th>Discharged</th>
+                        <th>Doctor</th>
+                        <th>Reports</th>
+                        <th>Billing</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if(!empty($admission_history)): ?>
+                        <?php foreach($admission_history as $adm): ?>
+                        <tr>
+                            <td>
+                                <div class="diagnosis-cell">
+                                    <strong><?= htmlspecialchars($adm['room_name']) ?></strong> - Bed <?= $adm['bed_number'] ?>
+                                    <br><small style="color:var(--text-muted);"><?= htmlspecialchars($adm['ward_name'] ?? '') ?></small>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="date-cell"><?= formatDateReadable($adm['admission_date']) ?></div>
+                                <small style="color:var(--text-muted);"><?= date('g:i A', strtotime($adm['admission_date'])) ?></small>
+                            </td>
+                            <td>
+                                <?php if($adm['status'] == 1 && $adm['discharge_date']): ?>
+                                    <div class="date-cell"><?= formatDateReadable($adm['discharge_date']) ?></div>
+                                    <small style="color:var(--text-muted);"><?= date('g:i A', strtotime($adm['discharge_date'])) ?></small>
+                                <?php else: ?>
+                                    <span style="color:#d97706;font-weight:600;">Still Admitted</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <div class="diagnosis-cell"><?= htmlspecialchars($adm['doctor_name'] ?? 'N/A') ?></div>
+                            </td>
+                            <td>
+                                <span class="badge badge-secondary"><?= $adm['report_count'] ?></span>
+                            </td>
+                            <td>
+                                <div class="diagnosis-cell">
+                                    &#8358;<?= number_format($adm['total_bill'], 2) ?>
+                                    <?php if($adm['paid_amount'] < $adm['total_bill']): ?>
+                                        <br><small style="color:#dc2626;">Unpaid: &#8358;<?= number_format($adm['total_bill'] - $adm['paid_amount'], 2) ?></small>
+                                    <?php else: ?>
+                                        <br><small style="color:#15803d;">Fully Paid</small>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                            <td>
+                                <?php if($adm['status'] == 0): ?>
+                                    <span style="background:#dcfce7;color:#15803d;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;">Active</span>
+                                <?php elseif($adm['status'] == 1): ?>
+                                    <span style="background:#f1f5f9;color:#64748b;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;">Discharged</span>
+                                <?php else: ?>
+                                    <span style="background:#fef2f2;color:#dc2626;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;">Cancelled</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                                    <a href="../admission/reports.php?id=<?= $adm['id'] ?>" style="color:#2563eb;font-size:12px;text-decoration:none;font-weight:600;">Reports</a>
+                                    <a href="../admission/billing.php?id=<?= $adm['id'] ?>" style="color:#7c3aed;font-size:12px;text-decoration:none;font-weight:600;">Billing</a>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="8" style="text-align:center;">
+                                No admission history for this patient
+                            </td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
     <!-- Previous Appointments Card -->
   <div class="card">

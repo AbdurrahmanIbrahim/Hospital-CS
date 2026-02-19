@@ -1841,6 +1841,8 @@ CREATE TABLE `admission_billing` (
   `amount` float NOT NULL,
   `billing_type` int(11) NOT NULL COMMENT '1=room_stay, 2=drug, 3=other',
   `reference_id` int(11) NOT NULL DEFAULT 0,
+  `paid` int(11) NOT NULL DEFAULT 0 COMMENT '0=unpaid, 1=paid',
+  `payment_id` int(11) NOT NULL DEFAULT 0,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   PRIMARY KEY (`id`),
   KEY `idx_admission_billing` (`admission_id`)

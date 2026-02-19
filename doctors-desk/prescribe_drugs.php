@@ -167,8 +167,8 @@ if ($activeAdmission) {
         $drug_total = $price * $qty;
         $desc = $db->real_escape_string("Drug: $drug_name (Qty: $qty)");
         $db->query("
-            INSERT INTO admission_billing (admission_id, description, amount, billing_type, reference_id)
-            VALUES ('" . $activeAdmission['id'] . "', '$desc', '$drug_total', 2, '$payment_id')
+            INSERT INTO admission_billing (admission_id, description, amount, billing_type, reference_id, paid)
+            VALUES ('" . $activeAdmission['id'] . "', '$desc', '$drug_total', 2, '$payment_id', 0)
         ");
     }
 }

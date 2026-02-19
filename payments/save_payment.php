@@ -76,14 +76,17 @@ if (!$update) {
    POST-PAYMENT ACTIONS
 ========================= */
 
-// If DRUG payment → mark patient_drugs as paid
+// If DRUG payment → mark patient_drugs as paid + mark admission billing drug items
 if($payment['purpose'] == 2){
-  
+
   $db->query("
-    UPDATE patient_drugs 
-    SET status = 1 
+    UPDATE patient_drugs
+    SET status = 1
     WHERE payment_id = '$payment_id'
 ");
+
+  // Also mark admission billing drug items as paid (for admitted patients)
+  $db->query("UPDATE admission_billing SET paid = 1 WHERE billing_type = 2 AND reference_id = '$payment_id'");
 
 
 }else if($payment['purpose'] == 3){
@@ -120,8 +123,8 @@ $db->query("
 ");
 
 }else if($payment['purpose'] == 4){
-    // Admission payment - no additional status changes needed
-    // Admission remains active until discharge
+    // Admission billing item payment - mark the billing item as paid
+    $db->query("UPDATE admission_billing SET paid = 1 WHERE payment_id = '$payment_id'");
 }
 
 

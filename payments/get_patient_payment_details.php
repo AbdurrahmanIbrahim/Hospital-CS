@@ -136,23 +136,16 @@ while ($row = $labQ->fetch_assoc()) {
 
 }else if($purpose == 4){
 
-/* ---- ADMISSION BILLING ITEMS ---- */
-$appointment_id = $payment['appointment_id'];
-$admQ = $db->query("
-    SELECT a.id AS admission_id FROM admissions a
-    WHERE a.appointment_id = '$appointment_id' AND a.patient_id = '$patient_id'
-    ORDER BY a.id DESC LIMIT 1
+/* ---- ADMISSION BILLING ITEM ---- */
+$billingQ = $db->query("
+    SELECT description AS name,
+           CASE billing_type WHEN 1 THEN 'Room Stay' WHEN 2 THEN 'Drug' ELSE 'Other' END AS type,
+           amount AS price
+    FROM admission_billing
+    WHERE payment_id = '$payment_id'
+    LIMIT 1
 ");
-if($admQ && $admQ->num_rows > 0){
-    $adm = $admQ->fetch_assoc();
-    $billingQ = $db->query("
-        SELECT description AS name,
-               CASE billing_type WHEN 1 THEN 'Room Stay' WHEN 2 THEN 'Drug' ELSE 'Other' END AS type,
-               amount AS price
-        FROM admission_billing
-        WHERE admission_id = '".$adm['admission_id']."'
-        ORDER BY created_at ASC
-    ");
+if($billingQ){
     while ($row = $billingQ->fetch_assoc()) {
         $items[] = $row;
         $total_amount += (float)$row['price'];
