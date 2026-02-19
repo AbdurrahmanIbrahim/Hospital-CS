@@ -23,6 +23,6 @@ if(!$run){
     exit;
 }
 
-    $_SESSION['success'] = "Staff deleted successfully!";
+    $_SESSION['success'] = "Patient deleted successfully!";
     header('location:view.php');
     exit;

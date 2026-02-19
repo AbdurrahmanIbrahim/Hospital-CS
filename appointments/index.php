@@ -53,7 +53,7 @@ elseif (!empty($start_date) && !empty($end_date)) {
 
        $doctor_id = getId();
 
-       $sql = "SELECT room_id FROM assign_doctor WHERE doctor_id = '$doctor_id' AND status = 1";
+       $sql = "SELECT room_id FROM assign_doctors WHERE doctor_id = '$doctor_id' AND status = 1";
        $run = $db->query($sql);
        if($run->num_rows == 0){
          

@@ -33,10 +33,10 @@ $patient_test_id -= 1200;
    FETCH PATIENT TEST
 ========================= */
 $sql = "
-    SELECT * 
-    FROM test_lists 
-    WHERE id = '$patient_test_id' AND
-    status = 3 OR status = 4 OR status = 5 OR status = 6 
+    SELECT *
+    FROM test_lists
+    WHERE id = '$patient_test_id'
+      AND (status = 3 OR status = 4 OR status = 5 OR status = 6)
       AND paid = 1
 ";
 $run = $db->query($sql);
@@ -151,7 +151,7 @@ $patient_id = $row['patient_id'];
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title><?= APP_NAME ?> | Drug Categories</title>
+<title><?= APP_NAME ?> | Upload Results</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="../styles/styles.css">
 <style>

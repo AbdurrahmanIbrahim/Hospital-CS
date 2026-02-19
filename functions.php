@@ -420,6 +420,7 @@ function getPurpose($purpose){
     if($purpose == 1)return 'Form Purchase';
     else  if($purpose == 2)return 'For Drugs';
      else  if($purpose == 3)return 'For Laboratory';
+     else  if($purpose == 4)return 'For Admission';
      else return 'Unknown';
 }
 
@@ -452,7 +453,8 @@ function shortName($name) {
 function get_purpose($status){
   if($status == 1)return 'Form Purchase';
   else  if($status == 2)return 'Drugs Purchase';
-  else  if($status == 3)return 'Laboratory ';
+  else  if($status == 3)return 'Laboratory';
+  else  if($status == 4)return 'Admission';
 }
 
 function get_payment_status_badge($status){
@@ -487,11 +489,74 @@ function get_status($status)
     $txt = 'result has been given to patient';
   }
 
-       return $txt; 
+       return $txt;
 
 }
 
 
+// ===================== ADMISSION FUNCTIONS =====================
+
+function getActiveAdmission($patient_id){
+    global $db;
+    $patient_id = intval($patient_id);
+    $sql = "SELECT * FROM admissions WHERE patient_id = '$patient_id' AND status = 0 LIMIT 1";
+    $run = $db->query($sql);
+    return ($run && $run->num_rows > 0) ? $run->fetch_assoc() : null;
+}
+
+function getAvailableBeds($room_id){
+    global $db;
+    $room_id = intval($room_id);
+    $room = $db->query("SELECT bed_space FROM rooms WHERE id = '$room_id' AND room_type = 1 AND status = 1");
+    if(!$room || $room->num_rows == 0) return 0;
+    $room_info = $room->fetch_assoc();
+    $occupied = $db->query("SELECT COUNT(*) AS cnt FROM admissions WHERE room_id = '$room_id' AND status = 0");
+    $occ_info = $occupied->fetch_assoc();
+    return max(0, $room_info['bed_space'] - ($occ_info['cnt'] ?? 0));
+}
+
+function getAdmissionTotal($admission_id){
+    global $db;
+    $admission_id = intval($admission_id);
+    $sql = "SELECT COALESCE(SUM(amount), 0) AS total FROM admission_billing WHERE admission_id = '$admission_id'";
+    $run = $db->query($sql);
+    $info = $run->fetch_assoc();
+    return $info['total'];
+}
+
+function processRoomBilling($admission_id){
+    global $db;
+    $admission_id = intval($admission_id);
+    $admission = $db->query("SELECT * FROM admissions WHERE id = '$admission_id' AND status = 0");
+    if(!$admission || $admission->num_rows == 0) return;
+    $admission = $admission->fetch_assoc();
+
+    $room = $db->query("SELECT room_price FROM rooms WHERE id = '".$admission['room_id']."'");
+    if(!$room || $room->num_rows == 0) return;
+    $room = $room->fetch_assoc();
+
+    $last_billed = new DateTime($admission['last_billed_at']);
+    $now = new DateTime();
+    $diff = $now->diff($last_billed);
+    $hours = ($diff->days * 24) + $diff->h;
+    $days_to_bill = floor($hours / 24);
+
+    if($days_to_bill > 0){
+        $price_per_day = $room['room_price'];
+        for($i = 0; $i < $days_to_bill; $i++){
+            $bill_date = clone $last_billed;
+            $bill_date->modify('+' . ($i + 1) . ' days');
+            $desc = $db->real_escape_string('Room stay charge - ' . $bill_date->format('d M Y'));
+            $db->query("
+                INSERT INTO admission_billing (admission_id, description, amount, billing_type, created_at)
+                VALUES ('$admission_id', '$desc', '$price_per_day', 1, '".$bill_date->format('Y-m-d H:i:s')."')
+            ");
+        }
+        $new_last_billed = clone $last_billed;
+        $new_last_billed->modify('+' . $days_to_bill . ' days');
+        $db->query("UPDATE admissions SET last_billed_at = '".$new_last_billed->format('Y-m-d H:i:s')."' WHERE id = '$admission_id'");
+    }
+}
 
 
 

@@ -101,6 +101,11 @@ $total_rooms = $result_rooms ? $result_rooms->fetch_assoc()['total_rooms'] : 0;
 $sql_beds = "SELECT SUM(bed_space) AS available_beds FROM rooms WHERE status = '1'";
 $result_beds = $db->query($sql_beds);
 $available_beds = $result_beds ? $result_beds->fetch_assoc()['available_beds'] : 0;
+
+// Fetch active admissions
+$sql_admissions = "SELECT COUNT(*) AS active_admissions FROM admissions WHERE status = 0";
+$result_admissions = $db->query($sql_admissions);
+$active_admissions = $result_admissions ? $result_admissions->fetch_assoc()['active_admissions'] : 0;
 ?>
 
 <div class="stats-grid">
@@ -134,6 +139,14 @@ $available_beds = $result_beds ? $result_beds->fetch_assoc()['available_beds'] :
         </div>
         <h3><?= $available_beds ?></h3>
         <p>Available Beds</p>
+    </div>
+
+    <div class="stat-card">
+        <div class="stat-header">
+            <div class="stat-icon-wrap" style="background: #fef2f2; color: #dc2626;">🏥</div>
+        </div>
+        <h3><?= $active_admissions ?></h3>
+        <p>Active Admissions</p>
     </div>
 </div>
 

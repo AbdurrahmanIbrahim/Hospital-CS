@@ -156,6 +156,23 @@ foreach($drugs as $d){
     $db->query("UPDATE pharmacy_stock SET quantity = quantity - $qty WHERE drug='$drug_id'");
 }
 
+// If patient has active admission, auto-add drug costs to admission billing
+$activeAdmission = getActiveAdmission($patient_id);
+if ($activeAdmission) {
+    foreach ($drugs as $d) {
+        $drug_id = intval($d['id']);
+        $qty = intval($d['quantity']);
+        $price = $db->query("SELECT selling_price FROM drugs WHERE id='$drug_id'")->fetch_assoc()['selling_price'];
+        $drug_name = $db->query("SELECT drug_name FROM drugs WHERE id='$drug_id'")->fetch_assoc()['drug_name'];
+        $drug_total = $price * $qty;
+        $desc = $db->real_escape_string("Drug: $drug_name (Qty: $qty)");
+        $db->query("
+            INSERT INTO admission_billing (admission_id, description, amount, billing_type, reference_id)
+            VALUES ('" . $activeAdmission['id'] . "', '$desc', '$drug_total', 2, '$payment_id')
+        ");
+    }
+}
+
 echo json_encode(['status'=>'success','message'=>'Prescription sent to pharmacy successfully']);
 exit;
 ?>

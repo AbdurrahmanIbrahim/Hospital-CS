@@ -56,7 +56,7 @@
         </div>
         
         <div class="items-section">
-          <div class="section-title">Items Items</div>
+          <div class="section-title">Items</div>
           <table class="items-table">
             <thead>
               <tr>

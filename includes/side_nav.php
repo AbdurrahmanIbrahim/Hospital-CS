@@ -151,6 +151,29 @@
                 </details>
              <?php } ?>
 
+             <?php if($_SESSION['type'] == 0 OR $_SESSION['type'] == 3 OR $_SESSION['type'] == 4){ ?>
+                <details>
+                    <summary class="<?=$location=='admission' ? 'active-link' : ''?>">
+                        <div style="display: flex; align-items: center;">
+                            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V6a2 2 0 012-2z"></path>
+                                <path d="M9 16h6M12 13v6"></path>
+                            </svg>
+                            <span class="nav-text">Admissions</span>
+                        </div>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                             stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                    </summary>
+                    <div class="dropdown-content">
+                        <a href="<?=ROOT_URL?>admission/view.php" class="dropdown-item">Active Admissions</a>
+                        <a href="<?=ROOT_URL?>admission/view.php?status=1" class="dropdown-item">Discharged</a>
+                        <a href="<?=ROOT_URL?>admission/view.php?status=all" class="dropdown-item">All Admissions</a>
+                    </div>
+                </details>
+             <?php } ?>
 
                   <?php if($_SESSION['type'] == 0 OR $_SESSION['type'] == 7){
                 ?>

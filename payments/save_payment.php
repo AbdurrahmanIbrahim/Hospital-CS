@@ -112,13 +112,16 @@ $db->query("
 
 
 }else if($payment['purpose'] == 1){
- 
+
   $db->query("
     UPDATE users
     SET status = 1
     WHERE id = '$patient_id'
 ");
 
+}else if($payment['purpose'] == 4){
+    // Admission payment - no additional status changes needed
+    // Admission remains active until discharge
 }
 
 

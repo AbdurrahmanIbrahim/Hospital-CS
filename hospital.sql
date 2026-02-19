@@ -1786,6 +1786,66 @@ ALTER TABLE `lgas`
   ADD CONSTRAINT `lgas_ibfk_1` FOREIGN KEY (`state_id`) REFERENCES `states` (`id`) ON DELETE CASCADE;
 COMMIT;
 
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `admissions`
+--
+
+CREATE TABLE `admissions` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `patient_id` int(11) NOT NULL,
+  `appointment_id` int(11) NOT NULL,
+  `room_id` int(11) NOT NULL,
+  `bed_number` int(11) NOT NULL,
+  `doctor_id` int(11) NOT NULL,
+  `admitted_by` int(11) NOT NULL,
+  `admission_date` datetime NOT NULL DEFAULT current_timestamp(),
+  `discharge_date` datetime DEFAULT NULL,
+  `status` int(11) NOT NULL DEFAULT 0 COMMENT '0=active, 1=discharged, -1=cancelled',
+  `notes` text NOT NULL DEFAULT '',
+  `last_billed_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `user_id` int(11) NOT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_patient` (`patient_id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_room` (`room_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `admission_reports`
+--
+
+CREATE TABLE `admission_reports` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `admission_id` int(11) NOT NULL,
+  `nurse_id` int(11) NOT NULL,
+  `report` text NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_admission` (`admission_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `admission_billing`
+--
+
+CREATE TABLE `admission_billing` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `admission_id` int(11) NOT NULL,
+  `description` text NOT NULL,
+  `amount` float NOT NULL,
+  `billing_type` int(11) NOT NULL COMMENT '1=room_stay, 2=drug, 3=other',
+  `reference_id` int(11) NOT NULL DEFAULT 0,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_admission_billing` (`admission_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

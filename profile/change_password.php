@@ -17,24 +17,21 @@ $user_id = getId();
        $hash = $info['password'];
 
           if(password_verify($password, $hash)){
-            if($new_password != '' or strlen($new_password) < 6){
-              if($new_password == $confirm_password){
-                $password = password_hash($new_password, PASSWORD_DEFAULT);
-              }else{
+            if($new_password == '' || strlen($new_password) < 6){
+                     $_SESSION['error'] = 'Enter new password (Must be 6 or more characters/numbers)';
+                    echo "<script>window.history.back();</script>";
+                     exit;
+            }
+            if($new_password != $confirm_password){
                      $_SESSION['error'] = 'Password does not match';
                     echo "<script>window.history.back();</script>";
                      exit;
-              }
-                             
-            }else{
-                     $_SESSION['error'] = 'Enter new password (Must be 6 or more characters/numbers)';
-                    echo "<script>window.history.back();</script>";
-                     exit; 
             }
+            $password = password_hash($new_password, PASSWORD_DEFAULT);
          }else{
                    $_SESSION['error'] = 'Old password incorrect';
                     echo "<script>window.history.back();</script>";
-                     exit; 
+                     exit;
           }
 
       $update = "UPDATE users SET password = '$password' WHERE id = '$user_id'";
