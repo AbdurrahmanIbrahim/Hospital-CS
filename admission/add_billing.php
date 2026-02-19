@@ -41,7 +41,12 @@ if ($billing_mode === 'drug') {
         $drug_info = $drug->fetch_assoc();
 
         $total = $drug_info['selling_price'] * $qty;
-        $desc = $db->real_escape_string("Drug: " . $drug_info['drug_name'] . " (Qty: $qty)");
+        $prescription = sanitize($data['prescription'] ?? '');
+        $desc_text = "Drug: " . $drug_info['drug_name'] . " (Qty: $qty)";
+        if (!empty($prescription)) {
+            $desc_text .= " - " . $prescription;
+        }
+        $desc = $db->real_escape_string($desc_text);
 
         $db->query("INSERT INTO admission_billing (admission_id, description, amount, billing_type, paid, created_at)
                     VALUES ('$admission_id', '$desc', '$total', 2, 0, NOW())");

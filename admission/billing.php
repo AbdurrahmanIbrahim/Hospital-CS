@@ -85,6 +85,16 @@ $days = $admitted_date->diff($now)->days + 1;
 // Check if all items are paid
 $all_paid = ($unpaid_total == 0 && count($billing_items) > 0);
 
+// Fetch patient scheme info
+$patient_id = $admission['patient_id'];
+$scheme_name = 'None';
+$scheme_discount = 0;
+$patientScheme = $db->query("SELECT u.scheme_type, s.scheme_name, s.discount_fee FROM users u LEFT JOIN schemes s ON s.id = u.scheme_type AND s.status = 1 WHERE u.id = '$patient_id'")->fetch_assoc();
+if ($patientScheme && !empty($patientScheme['scheme_name'])) {
+    $scheme_name = $patientScheme['scheme_name'];
+    $scheme_discount = floatval($patientScheme['discount_fee']);
+}
+
 // Fetch drugs and tests for dynamic billing form
 $allDrugs = [];
 $run = $db->query("SELECT id, drug_name, selling_price, dosage_form, strength FROM drugs WHERE status = 1 ORDER BY drug_name ASC");
@@ -207,6 +217,16 @@ if($run) while($row = $run->fetch_assoc()) $allTests[] = $row;
             flex-shrink: 0;
         }
         .billing-qty-input:disabled { background: #f3f4f6; opacity: 0.5; }
+        .billing-prescription-input {
+            flex: 1;
+            min-width: 180px;
+            padding: 6px 10px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        .billing-prescription-input:disabled { background: #f3f4f6; opacity: 0.5; }
+        .billing-item-row { flex-wrap: wrap; }
     </style>
 </head>
 
@@ -304,6 +324,10 @@ if($run) while($row = $run->fetch_assoc()) $allTests[] = $row;
                     <label>Admission Date</label>
                     <p><?= formatDateReadableWithTime($admission['admission_date']) ?></p>
                 </div>
+                <div class="form-group">
+                    <label>Scheme</label>
+                    <p><?= htmlspecialchars($scheme_name) ?> <?php if($scheme_discount > 0): ?><span style="background:#dbeafe;color:#2563eb;padding:2px 10px;border-radius:12px;font-size:12px;font-weight:600;"><?= $scheme_discount ?>% discount</span><?php endif; ?></p>
+                </div>
             </div>
         </div>
     </div>
@@ -333,14 +357,15 @@ if($run) while($row = $run->fetch_assoc()) $allTests[] = $row;
                     </div>
                     <div class="billing-items-grid" id="drugBillingGrid" style="max-height:250px;overflow-y:auto;border:1px solid #e5e7eb;border-radius:8px;padding:8px;">
                         <?php foreach($allDrugs as $d): ?>
-                        <label class="billing-item-row drug-billing-row" data-name="<?= strtolower($d['drug_name']) ?>">
+                        <div class="billing-item-row drug-billing-row" data-name="<?= strtolower($d['drug_name']) ?>">
                             <input type="checkbox" name="drugs[<?= $d['id'] ?>][selected]" value="1" class="drug-billing-check" data-price="<?= $d['selling_price'] ?>" data-id="<?= $d['id'] ?>" onchange="toggleDrugQty(this)">
                             <span class="billing-item-info">
                                 <strong><?= htmlspecialchars($d['drug_name']) ?></strong>
                                 <small><?= htmlspecialchars($d['dosage_form']) ?> - <?= htmlspecialchars($d['strength']) ?> | &#8358;<?= number_format($d['selling_price'], 2) ?></small>
                             </span>
                             <input type="number" name="drugs[<?= $d['id'] ?>][qty]" class="billing-qty-input" placeholder="Qty" min="1" value="1" disabled>
-                        </label>
+                            <input type="text" name="drugs[<?= $d['id'] ?>][prescription]" class="billing-prescription-input" placeholder="e.g. 1 tab twice daily for 5 days" disabled>
+                        </div>
                         <?php endforeach; ?>
                     </div>
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
@@ -505,6 +530,22 @@ if($run) while($row = $run->fetch_assoc()) $allTests[] = $row;
             <label>Amount</label>
             <input type="text" id="modal_amount" readonly style="background:#f8fafc;font-weight:700;">
         </div>
+        <?php if($scheme_discount > 0): ?>
+        <div id="modal_discount_section" style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px;margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+                <span>Scheme: <?= htmlspecialchars($scheme_name) ?></span>
+                <span style="font-weight:600;"><?= $scheme_discount ?>% discount</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
+                <span>Discount:</span>
+                <span id="modal_discount_amount" style="color:#dc2626;">-&#8358;0.00</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:700;border-top:1px solid #bae6fd;padding-top:6px;margin-top:4px;">
+                <span>Net Amount:</span>
+                <span id="modal_net_amount" style="color:#15803d;">&#8358;0.00</span>
+            </div>
+        </div>
+        <?php endif; ?>
         <div class="form-group">
             <label>Payment Method *</label>
             <select id="modal_method">
@@ -553,9 +594,15 @@ function filterBillingLabs() {
 
 /* === Toggle Drug Qty & Update Total === */
 function toggleDrugQty(checkbox) {
-    var qtyInput = checkbox.closest('.billing-item-row').querySelector('.billing-qty-input');
+    var row = checkbox.closest('.billing-item-row');
+    var qtyInput = row.querySelector('.billing-qty-input');
+    var prescInput = row.querySelector('.billing-prescription-input');
     qtyInput.disabled = !checkbox.checked;
-    if (!checkbox.checked) qtyInput.value = 1;
+    prescInput.disabled = !checkbox.checked;
+    if (!checkbox.checked) {
+        qtyInput.value = 1;
+        prescInput.value = '';
+    }
     updateDrugTotal();
 }
 
@@ -584,11 +631,21 @@ document.querySelectorAll('.billing-qty-input').forEach(function(input){
 });
 
 /* === Payment Modal === */
+var schemeDiscount = <?= $scheme_discount ?>;
+
 function openPayModal(billingId, description, amount) {
     document.getElementById('modal_billing_id').value = billingId;
     document.getElementById('modal_desc').value = description;
     document.getElementById('modal_amount').value = '\u20A6' + parseFloat(amount).toLocaleString(undefined, {minimumFractionDigits: 2});
     document.getElementById('modal_method').value = '';
+
+    if (schemeDiscount > 0) {
+        var discountAmt = amount * (schemeDiscount / 100);
+        var netAmt = Math.max(0, amount - discountAmt);
+        document.getElementById('modal_discount_amount').textContent = '-\u20A6' + discountAmt.toLocaleString(undefined, {minimumFractionDigits: 2});
+        document.getElementById('modal_net_amount').textContent = '\u20A6' + netAmt.toLocaleString(undefined, {minimumFractionDigits: 2});
+    }
+
     document.getElementById('payModal').classList.add('active');
 }
 
