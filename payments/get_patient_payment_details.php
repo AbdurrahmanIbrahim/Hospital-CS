@@ -4,7 +4,7 @@ include '../functions.php';
 
 header('Content-Type: application/json');
 
-if (!isLoggedIn() || ($_SESSION['type'] != 0 AND $_SESSION['type'] != 7)) {
+if (!isLoggedIn() || !in_array($_SESSION['type'], [0, 2, 6, 7, 9])) {
     echo json_encode(['success' => false, 'message' => 'Unauthorized']);
     exit;
 }
@@ -127,12 +127,23 @@ while ($row = $labQ->fetch_assoc()) {
 }
 
 
-while ($row = $labQ->fetch_assoc()) {
-    $items[] = $row;
-    $total_amount += (float)$row['price'];
+
+}else if($purpose == 5){
+
+/* ---- RADIOLOGY SCAN ITEMS ---- */
+$scanQ = $db->query("
+    SELECT s.name, 'Radiology Scan' AS type, s.amount AS price
+    FROM patient_scan ps
+    JOIN scan_lists sl ON sl.patient_scan_id = ps.id
+    JOIN scans s ON s.id = sl.scan_id
+    WHERE ps.payment_id = '$payment_id'
+");
+if($scanQ){
+    while ($row = $scanQ->fetch_assoc()) {
+        $items[] = $row;
+        $total_amount += (float)$row['price'];
+    }
 }
-
-
 
 }else if($purpose == 4){
 

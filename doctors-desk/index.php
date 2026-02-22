@@ -80,6 +80,11 @@ $vitals = $db->query($sql);
   $run = $db->query($sql);
   while($row = $run->fetch_assoc())$myDrugs[] = $row;
 
+  $myScans = [];
+  $sql = "SELECT * FROM scans WHERE status = 1 ORDER BY name ASC";
+  $run = $db->query($sql);
+  if($run) while($row = $run->fetch_assoc())$myScans[] = $row;
+
   $previous_appointments = [];
 
 $sql = "
@@ -176,7 +181,18 @@ while ($row = $run->fetch_assoc()) {
     $prescribed_tests[] = $row;
 }
 
-// $myTests now contains all lab tests for that appointment
+// Fetch prescribed scans for this appointment
+$prescribed_scans = [];
+$sql = "
+    SELECT sl.*, s.name AS scan_name, s.modality, s.body_part, s.amount AS scan_amount,
+           ps.priority AS scan_priority, ps.clinical_info
+    FROM patient_scan ps
+    JOIN scan_lists sl ON ps.id = sl.patient_scan_id
+    JOIN scans s ON sl.scan_id = s.id
+    WHERE ps.appointment_id = '$appointment_id'
+";
+$run = $db->query($sql);
+if($run) while ($row = $run->fetch_assoc()) $prescribed_scans[] = $row;
 
 // Fetch admission history for this patient
 $admission_history = [];
@@ -545,8 +561,46 @@ if($run) while ($row = $run->fetch_assoc()) $admission_history[] = $row;
                         </div>
                     </div>
 
-                
-                    
+                    <!-- Radiology Scans Section -->
+                    <div class="form-section">
+                        <div class="section-header">
+                            <label class="form-label">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M12 16v-4"></path>
+                                    <path d="M12 8h.01"></path>
+                                </svg>
+                                Order Radiology Scans
+                            </label>
+                        </div>
+
+                        <div class="lab-tests-grid" id="scanGrid">
+                            <div class="lab-tests-search" style="margin-bottom:12px;">
+                                <input type="text" id="scanSearch" placeholder="Search scan..." style="width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;">
+                            </div>
+                            <?php foreach($myScans as $scan): ?>
+                                <label class="checkbox-label scan-item" data-name="<?= strtolower($scan['name'] . ' ' . $scan['modality'] . ' ' . $scan['body_part']) ?>">
+                                    <input type="checkbox" name="scans[]" value="<?= $scan['id'] ?>" class="checkbox-input scan-checkbox" data-name="<?= htmlspecialchars($scan['name']) ?>" data-modality="<?= htmlspecialchars($scan['modality']) ?>">
+                                    <span class="checkbox-custom"></span>
+                                    <span class="checkbox-text"><?= htmlspecialchars($scan['name']) ?> <small style="color:#6b7280;">(<?= $scan['modality'] ?>)</small></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <div class="form-actions" style="margin-top: 16px;">
+                            <button type="button" class="btn-secondary" onclick="sendToRadiology()">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <path d="M12 8v8"></path>
+                                    <path d="M8 12h8"></path>
+                                </svg>
+                                Send to Radiology
+                            </button>
+                        </div>
+                    </div>
+
+
+
                 </div>
            
         </div>
@@ -712,6 +766,58 @@ if($run) while ($row = $run->fetch_assoc()) $admission_history[] = $row;
                             <td colspan="7" style="text-align:center;">
                                 No tests prescribed for this appointment
                             </td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Prescribed Scans Card -->
+<div class="card">
+    <div class="card-header">
+        <h2>Prescribed Scans</h2>
+        <div class="card-actions">
+            <span class="badge badge-secondary">Total: <?= count($prescribed_scans) ?> records</span>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Scan Name</th>
+                        <th>Modality</th>
+                        <th>Body Part</th>
+                        <th>Priority</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if(!empty($prescribed_scans)): ?>
+                        <?php foreach($prescribed_scans as $ps): ?>
+                            <tr>
+                                <td><div class="diagnosis-cell"><?= htmlspecialchars($ps['scan_name']) ?></div></td>
+                                <td><span style="background:#ede9fe;color:#7c3aed;padding:3px 10px;border-radius:12px;font-size:11px;font-weight:600;"><?= htmlspecialchars($ps['modality']) ?></span></td>
+                                <td><div class="diagnosis-cell"><?= htmlspecialchars($ps['body_part']) ?></div></td>
+                                <td><div class="diagnosis-cell"><?= htmlspecialchars($ps['scan_priority'] ?? 'routine') ?></div></td>
+                                <td><div class="diagnosis-cell">&#8358;<?= number_format($ps['scan_amount']) ?></div></td>
+                                <td><?= get_scan_status_badge($ps['status']) ?></td>
+                                <td>
+                                    <?php if($ps['status'] >= 4): ?>
+                                        <a href="../radiology/view_report.php?id=<?= $ps['id'] ?>">View Report</a>
+                                    <?php else: ?>
+                                        <span style="color:var(--text-muted);font-size:12px;"><?= get_scan_status($ps['status']) ?></span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="7" style="text-align:center;">No scans prescribed for this appointment</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -1133,6 +1239,81 @@ if($run) while ($row = $run->fetch_assoc()) $admission_history[] = $row;
                     <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                 </svg>
                 Send to Laboratory
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Scan Modal -->
+<div class="modal-overlay" id="scanModal" style="display: none;">
+    <div class="modal-container">
+        <div class="modal-header">
+            <h3>Send Scan Request to Radiology</h3>
+            <button class="modal-close" onclick="closeScanModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        </div>
+
+        <div class="modal-body">
+            <div class="modal-patient-info">
+                <div class="patient-avatar-small">
+                    <span><?=shortName($appointment['patient_name'])?></span>
+                </div>
+                <div>
+                    <h4><?= $appointment['patient_name'] ?></h4>
+                    <p>Hospital #: <?= $appointment['hospital_num'] ?> | Appointment: <?= formatDateReadableWithTime($appointment['date_appointed']) ?></p>
+                </div>
+            </div>
+
+            <div class="modal-section">
+                <div class="section-header">
+                    <h4>Selected Scans</h4>
+                    <span class="badge" id="selectedScanCount">0 scans selected</span>
+                </div>
+                <div class="selected-items-list" id="selectedScansList"></div>
+            </div>
+
+            <div class="modal-section">
+                <h4>Scan Instructions</h4>
+                <div class="form-group">
+                    <label>Priority</label>
+                    <div class="priority-select">
+                        <label class="radio-label">
+                            <input type="radio" name="scanPriority" value="routine" checked>
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">Routine</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="scanPriority" value="urgent">
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">Urgent</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="scanPriority" value="stat">
+                            <span class="radio-custom"></span>
+                            <span class="radio-text">STAT (Immediate)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="scanClinicalInfo">Clinical Information</label>
+                    <textarea id="scanClinicalInfo" rows="3" placeholder="Relevant clinical information for the radiologist..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn-secondary" onclick="closeScanModal()">Cancel</button>
+            <button class="btn-primary" onclick="confirmScanSend()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
+                    <path d="M22 2L11 13"></path>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+                Send to Radiology
             </button>
         </div>
     </div>

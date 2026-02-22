@@ -34,7 +34,7 @@
             </div>
             <div class="info-item">
               <span class="info-label">Customer</span>
-              <span class="info-value"><?= get('name','users',$payment['patient_id']) ?></span>
+              <span class="info-value"><?= $payment['patient_id'] > 0 ? get('name','users',$payment['patient_id']) : ($payment['note'] ?: 'Walk-In Customer') ?></span>
             </div>
             <div class="info-item">
               <span class="info-label">Payment Method</span>

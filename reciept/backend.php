@@ -1,7 +1,7 @@
 <?php
 include '../functions.php';
 
-if (!isLoggedIn() || ($_SESSION['type'] != 0 AND $_SESSION['type'] != 7)) {
+if (!isLoggedIn() || !in_array($_SESSION['type'], [0, 2, 6, 7, 9])) {
     $_SESSION['error'] = 'Login To Continue';
     echo "<script>window.location.href='../login/index.php'</script>";
     exit;
@@ -124,6 +124,24 @@ while ($row = $labQ->fetch_assoc()) {
     ");
     if($billingQ){
         while ($row = $billingQ->fetch_assoc()) {
+            $items[] = $row;
+            $total_amount += (float)$row['price'];
+        }
+    }
+}else if($purpose == 5){
+    // Radiology scan items
+    $scanQ = $db->query("
+        SELECT s.name,
+               'Radiology Scan' AS type,
+               sl.amount AS price,
+               1 AS quantity
+        FROM patient_scan ps
+        JOIN scan_lists sl ON sl.patient_scan_id = ps.id
+        JOIN scans s ON s.id = sl.scan_id
+        WHERE ps.payment_id = '$payment_id'
+    ");
+    if($scanQ){
+        while ($row = $scanQ->fetch_assoc()) {
             $items[] = $row;
             $total_amount += (float)$row['price'];
         }

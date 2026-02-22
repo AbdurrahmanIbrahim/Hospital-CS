@@ -240,6 +240,9 @@
 
                     <a href="<?=ROOT_URL?>prescriptions/" class="dropdown-item">Prescriptions</a>
                     <a href="<?=ROOT_URL?>prescriptions/dispensed.php" class="dropdown-item">Dispensed Drugs Report</a>
+
+                    <a href="<?=ROOT_URL?>pharmacy-pos/" class="dropdown-item">POS - Drug Sales</a>
+                    <a href="<?=ROOT_URL?>pharmacy-pos/sales_history.php" class="dropdown-item">POS Sales History</a>
                 </div>
             </details>
              <?php } ?>
@@ -265,11 +268,40 @@
                         <a href="<?=ROOT_URL?>lab/index.php?status=4" class="dropdown-item">Results Verification</a>
                         <a href="<?=ROOT_URL?>lab/index.php?status=5" class="dropdown-item">Print Result</a>
                         <a href="<?=ROOT_URL?>lab/index.php" class="dropdown-item">Lab Tracker</a>
+                        <a href="<?=ROOT_URL?>lab-pos/" class="dropdown-item">POS - Direct Lab Testing</a>
+                        <a href="<?=ROOT_URL?>lab-pos/history.php" class="dropdown-item">POS Test History</a>
                    </div>
 
                 </details>
            <?php } ?>
-             
+
+           <?php if($_SESSION['type'] == 0 OR $_SESSION['type'] == 9){ ?>
+                <details>
+                    <summary class="<?=$location=='radiology' ? 'active-link' : ''?>">
+                        <div style="display: flex; align-items: center;">
+                            <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M12 16v-4"></path>
+                                <path d="M12 8h.01"></path>
+                            </svg>
+                            <span class="nav-text">Radiology</span>
+                        </div>
+                        <svg class="chevron" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </summary>
+                    <div class="dropdown-content">
+                        <a href="<?=ROOT_URL?>scans/" class="dropdown-item">Add Scan Type</a>
+                        <a href="<?=ROOT_URL?>scans/view.php" class="dropdown-item">View Scan Types</a>
+                        <a href="<?=ROOT_URL?>radiology/index.php?status=1" class="dropdown-item">Pending Scans</a>
+                        <a href="<?=ROOT_URL?>radiology/index.php?status=2" class="dropdown-item">Perform Scan</a>
+                        <a href="<?=ROOT_URL?>radiology/index.php?status=3" class="dropdown-item">Upload Report</a>
+                        <a href="<?=ROOT_URL?>radiology/index.php?status=4" class="dropdown-item">Verify Report</a>
+                        <a href="<?=ROOT_URL?>radiology/index.php?status=5" class="dropdown-item">Print / Release</a>
+                        <a href="<?=ROOT_URL?>radiology/index.php" class="dropdown-item">Scan Tracker</a>
+                        <a href="<?=ROOT_URL?>radiology-pos/" class="dropdown-item">POS - Walk-in Scans</a>
+                    </div>
+                </details>
+           <?php } ?>
+
             </div>
 
             <div style="margin-top: 20px; border-top: 1px solid #1e293b; padding-top: 20px;">

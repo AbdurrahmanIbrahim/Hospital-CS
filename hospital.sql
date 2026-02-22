@@ -1848,6 +1848,86 @@ CREATE TABLE `admission_billing` (
   KEY `idx_admission_billing` (`admission_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- --------------------------------------------------------
+-- Table structure for table `scans`
+-- --------------------------------------------------------
+
+CREATE TABLE `scans` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` text NOT NULL,
+  `modality` enum('X-Ray','CT','MRI','Ultrasound','Mammography','Fluoroscopy','Nuclear','PET') NOT NULL DEFAULT 'X-Ray',
+  `body_part` text NOT NULL DEFAULT '',
+  `amount` float NOT NULL DEFAULT 0,
+  `description` text NOT NULL DEFAULT '',
+  `status` int(11) NOT NULL DEFAULT 1,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- Table structure for table `patient_scan`
+-- --------------------------------------------------------
+
+CREATE TABLE `patient_scan` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `appointment_id` int(11) NOT NULL DEFAULT 0,
+  `patient_id` int(11) NOT NULL DEFAULT 0,
+  `user_id` int(11) NOT NULL,
+  `payment_id` int(11) NOT NULL DEFAULT 0,
+  `priority` text NOT NULL DEFAULT 'routine',
+  `clinical_info` text NOT NULL DEFAULT '',
+  `status` int(11) NOT NULL DEFAULT 0,
+  `is_walkin` int(11) NOT NULL DEFAULT 0,
+  `walkin_name` text NOT NULL DEFAULT '',
+  `walkin_phone` text NOT NULL DEFAULT '',
+  `date_request` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_patient_scan_appointment` (`appointment_id`),
+  KEY `idx_patient_scan_patient` (`patient_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- Table structure for table `scan_lists`
+-- --------------------------------------------------------
+
+CREATE TABLE `scan_lists` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `patient_scan_id` int(11) NOT NULL,
+  `scan_id` int(11) NOT NULL,
+  `asker_id` int(11) NOT NULL DEFAULT 0,
+  `status` int(11) NOT NULL DEFAULT 0,
+  `radiologist_id` int(11) NOT NULL DEFAULT 0,
+  `verifier_id` int(11) NOT NULL DEFAULT 0,
+  `date_request` datetime NOT NULL DEFAULT current_timestamp(),
+  `date_performed` datetime DEFAULT NULL,
+  `date_reported` datetime DEFAULT NULL,
+  `date_verified` datetime DEFAULT NULL,
+  `date_released` datetime DEFAULT NULL,
+  `paid` int(11) NOT NULL DEFAULT 0,
+  `amount` float NOT NULL DEFAULT 0,
+  `notes` text NOT NULL DEFAULT '',
+  PRIMARY KEY (`id`),
+  KEY `idx_scan_lists_patient_scan` (`patient_scan_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- --------------------------------------------------------
+-- Table structure for table `scan_results`
+-- --------------------------------------------------------
+
+CREATE TABLE `scan_results` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `scan_list_id` int(11) NOT NULL,
+  `clinical_info` text NOT NULL DEFAULT '',
+  `findings` text NOT NULL DEFAULT '',
+  `impression` text NOT NULL DEFAULT '',
+  `recommendation` text NOT NULL DEFAULT '',
+  `radiologist_id` int(11) NOT NULL,
+  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
+  PRIMARY KEY (`id`),
+  KEY `idx_scan_results_list` (`scan_list_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

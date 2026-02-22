@@ -125,6 +125,16 @@ $db->query("
 }else if($payment['purpose'] == 4){
     // Admission billing item payment - mark the billing item as paid
     $db->query("UPDATE admission_billing SET paid = 1 WHERE payment_id = '$payment_id'");
+}else if($payment['purpose'] == 5){
+    // Radiology payment - mark patient_scan and scan_lists as paid
+    $db->query("UPDATE patient_scan SET status = 1 WHERE payment_id = '$payment_id'");
+    $scanInfo = $db->query("SELECT id FROM patient_scan WHERE payment_id = '$payment_id'")->fetch_assoc();
+    if ($scanInfo) {
+        $patient_scan_id = $scanInfo['id'];
+        $db->query("UPDATE scan_lists SET status = 1, paid = 1 WHERE patient_scan_id = '$patient_scan_id'");
+    }
+    // Also mark admission billing scan items as paid
+    $db->query("UPDATE admission_billing SET paid = 1 WHERE billing_type = 3 AND reference_id = '$payment_id'");
 }
 
 

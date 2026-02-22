@@ -405,6 +405,140 @@ function confirmLabSend() {
     });
 }
 
+// ============ RADIOLOGY SCAN FUNCTIONS ============
+
+let selectedScans = [];
+
+// Scan Search
+document.getElementById('scanSearch')?.addEventListener('keyup', function () {
+    let query = this.value.toLowerCase();
+    document.querySelectorAll('#scanGrid .scan-item').forEach(item => {
+        let name = item.dataset.name;
+        item.style.display = name.includes(query) ? 'flex' : 'none';
+    });
+});
+
+function sendToRadiology() {
+    const scanCheckboxes = document.querySelectorAll('.scan-checkbox:checked');
+    selectedScans = [];
+
+    scanCheckboxes.forEach(checkbox => {
+        selectedScans.push({
+            id: checkbox.value,
+            name: checkbox.dataset.name,
+            modality: checkbox.dataset.modality
+        });
+    });
+
+    if (selectedScans.length === 0) {
+        alert('Please select at least one scan.');
+        return;
+    }
+
+    updateScanModal();
+    document.getElementById('scanModal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function updateScanModal() {
+    const list = document.getElementById('selectedScansList');
+    const count = document.getElementById('selectedScanCount');
+
+    count.textContent = selectedScans.length + ' scan' + (selectedScans.length !== 1 ? 's' : '') + ' selected';
+    list.innerHTML = '';
+
+    if (selectedScans.length === 0) {
+        list.innerHTML = '<div class="empty-selection"><p>No scans selected</p></div>';
+        return;
+    }
+
+    selectedScans.forEach((scan, index) => {
+        const el = document.createElement('div');
+        el.className = 'selected-item';
+        el.innerHTML = `
+            <div class="selected-item-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"></circle>
+                    <path d="M12 16v-4"></path>
+                    <path d="M12 8h.01"></path>
+                </svg>
+            </div>
+            <div class="selected-item-details">
+                <div class="selected-item-name">${scan.name}</div>
+                <div style="font-size:12px;color:#6b7280;">${scan.modality}</div>
+            </div>
+            <button class="selected-item-remove" onclick="removeScanFromModal(${index})">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </button>
+        `;
+        list.appendChild(el);
+    });
+}
+
+function removeScanFromModal(index) {
+    const removed = selectedScans[index];
+    selectedScans.splice(index, 1);
+    updateScanModal();
+
+    document.querySelectorAll('.scan-checkbox').forEach(cb => {
+        if (cb.value === removed.id) cb.checked = false;
+    });
+}
+
+function closeScanModal() {
+    document.getElementById('scanModal').style.display = 'none';
+    document.body.style.overflow = 'auto';
+}
+
+function confirmScanSend() {
+    if (selectedScans.length === 0) {
+        alert('Please select at least one scan.');
+        return;
+    }
+
+    const appointment_id = document.querySelector('#appointment_id').value;
+    const patient_id = document.querySelector('#patient_id').value;
+
+    const payload = {
+        appointment_id: appointment_id,
+        patient_id: patient_id,
+        scans: selectedScans,
+        priority: document.querySelector('input[name="scanPriority"]:checked').value,
+        clinical_info: document.getElementById('scanClinicalInfo').value
+    };
+
+    const btn = document.querySelector('#scanModal .btn-primary');
+    btn.disabled = true;
+    btn.innerHTML = 'Sending...';
+
+    fetch('send_scan_request.php', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(resp => {
+        if (resp.status === 'success') {
+            showToast('success', 'Success', resp.message);
+            closeScanModal();
+            document.querySelectorAll('.scan-checkbox:checked').forEach(cb => cb.checked = false);
+            selectedScans = [];
+        } else {
+            showToast('error', 'Error', resp.message);
+        }
+        btn.disabled = false;
+        btn.innerHTML = 'Send to Radiology';
+    })
+    .catch(() => {
+        alert('Network error');
+        btn.disabled = false;
+        btn.innerHTML = 'Send to Radiology';
+    });
+}
+
 // Toast Notification Function
 function showToast(type, title, message) {
     const toastContainer = document.getElementById('toastContainer');
@@ -470,15 +604,17 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.key === 'Escape') {
             closePharmacyModal();
             closeLabModal();
+            closeScanModal();
         }
     });
-    
+
     // Close modals when clicking outside
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
         overlay.addEventListener('click', function(e) {
             if (e.target === this) {
                 if (this.id === 'pharmacyModal') closePharmacyModal();
                 if (this.id === 'labModal') closeLabModal();
+                if (this.id === 'scanModal') closeScanModal();
             }
         });
     });

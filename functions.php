@@ -421,6 +421,7 @@ function getPurpose($purpose){
     else  if($purpose == 2)return 'For Drugs';
      else  if($purpose == 3)return 'For Laboratory';
      else  if($purpose == 4)return 'For Admission';
+     else  if($purpose == 5)return 'For Radiology';
      else return 'Unknown';
 }
 
@@ -455,6 +456,7 @@ function get_purpose($status){
   else  if($status == 2)return 'Drugs Purchase';
   else  if($status == 3)return 'Laboratory';
   else  if($status == 4)return 'Admission';
+  else  if($status == 5)return 'Radiology';
 }
 
 function get_payment_status_badge($status){
@@ -493,6 +495,29 @@ function get_status($status)
 
 }
 
+
+// ===================== RADIOLOGY FUNCTIONS =====================
+
+function get_scan_status($status){
+    if($status == '0') $txt = 'Ordered - Awaiting Payment';
+    else if($status == '1') $txt = 'Paid - Pending Scan';
+    else if($status == '2') $txt = 'Scan Performed';
+    else if($status == '3') $txt = 'Report Uploaded';
+    else if($status == '4') $txt = 'Report Verified';
+    else if($status == '5') $txt = 'Released to Patient';
+    else $txt = 'Unknown';
+    return $txt;
+}
+
+function get_scan_status_badge($status){
+    if($status == 0) return '<span class="badge-small badge-warning">Pending</span>';
+    else if($status == 1) return '<span class="badge-small badge-info">Awaiting Scan</span>';
+    else if($status == 2) return '<span class="badge-small badge-warning">Awaiting Report</span>';
+    else if($status == 3) return '<span class="badge-small badge-info">Awaiting Verification</span>';
+    else if($status == 4) return '<span class="badge-small badge-success">Verified</span>';
+    else if($status == 5) return '<span class="badge-small badge-success">Released</span>';
+    else return '<span class="badge-small badge-secondary">Unknown</span>';
+}
 
 // ===================== ADMISSION FUNCTIONS =====================
 
