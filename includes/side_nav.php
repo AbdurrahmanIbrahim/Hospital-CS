@@ -23,6 +23,7 @@
                     </summary>
                     <div class="dropdown-content">
                         <a href="<?=ROOT_URL?>settings/" class="dropdown-item">Hospital Settings</a>
+                        <a href="<?=ROOT_URL?>consultation-fee/" class="dropdown-item">Consultation Fee</a>
                         <a href="<?=ROOT_URL?>staff/" class="dropdown-item">New Staff</a>
                         <a href="<?=ROOT_URL?>staff/view.php" class="dropdown-item">View Staff</a>
                     </div>

@@ -192,15 +192,16 @@ CREATE TABLE `hospital_details` (
   `logo` text NOT NULL,
   `website` text NOT NULL,
   `year` text NOT NULL,
-  `user_id` int(11) NOT NULL
+  `user_id` int(11) NOT NULL,
+  `consultation_fee` float NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 --
 -- Dumping data for table `hospital_details`
 --
 
-INSERT INTO `hospital_details` (`id`, `name`, `email`, `phone`, `address`, `logo`, `website`, `year`, `user_id`) VALUES
-(1, 'Godiya Hospital', 'gh@gmail.com', '09065478965', 'Badariyya', 'hospital_6965711592a560.19366332.jpeg', '', '2005', 1);
+INSERT INTO `hospital_details` (`id`, `name`, `email`, `phone`, `address`, `logo`, `website`, `year`, `user_id`, `consultation_fee`) VALUES
+(1, 'Godiya Hospital', 'gh@gmail.com', '09065478965', 'Badariyya', 'hospital_6965711592a560.19366332.jpeg', '', '2005', 1, 0);
 
 -- --------------------------------------------------------
 

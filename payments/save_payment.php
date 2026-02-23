@@ -135,9 +135,13 @@ $db->query("
     }
     // Also mark admission billing scan items as paid
     $db->query("UPDATE admission_billing SET paid = 1 WHERE billing_type = 3 AND reference_id = '$payment_id'");
+}else if($payment['purpose'] == 6){
+    // Consultation fee payment - activate the appointment
+    $appointment_id = $payment['appointment_id'];
+    if ($appointment_id > 0) {
+        $db->query("UPDATE appointments SET status = 0 WHERE id = '$appointment_id' AND status = -1");
+    }
 }
-
-
 
 
 

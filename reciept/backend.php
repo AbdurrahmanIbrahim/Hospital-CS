@@ -1,7 +1,7 @@
 <?php
 include '../functions.php';
 
-if (!isLoggedIn() || !in_array($_SESSION['type'], [0, 2, 6, 7, 9])) {
+if (!isLoggedIn() || !in_array($_SESSION['type'], [0, 2, 5, 6, 7, 9])) {
     $_SESSION['error'] = 'Login To Continue';
     echo "<script>window.location.href='../login/index.php'</script>";
     exit;
@@ -146,9 +146,16 @@ while ($row = $labQ->fetch_assoc()) {
             $total_amount += (float)$row['price'];
         }
     }
+}else if($purpose == 6){
+    // Consultation fee
+    $items[] = [
+        'name' => 'Consultation Fee',
+        'type' => 'Consultation',
+        'price' => $payment['amount'],
+        'quantity' => 1
+    ];
+    $total_amount = (float)$payment['amount'];
 }
-
-
 
 
 

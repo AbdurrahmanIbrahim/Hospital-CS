@@ -413,16 +413,20 @@ $appointments = $db->query($sql);
                             : '-' ?>
                     </td>
                     <td>
-                        <?= $row['status'] == 0
-                            ? '<span style="color:#e67e22;font-weight:600;">Active</span>'
-                            : '<span style="color:#0a7a0a;font-weight:600;">Completed</span>' ?>
+                        <?php if($row['status'] == -1): ?>
+                            <span style="color:#c0392b;font-weight:600;">Pending Payment</span>
+                        <?php elseif($row['status'] == 0): ?>
+                            <span style="color:#e67e22;font-weight:600;">Active</span>
+                        <?php else: ?>
+                            <span style="color:#0a7a0a;font-weight:600;">Completed</span>
+                        <?php endif; ?>
                     </td>
 
                     <td class="table-actions">
                         <a onclick="deleteAppointment(<?= $row['id'] ?>)"
                            class="delete-btn">Delete</a>
                     </td>
-                  <?php if($_SESSION['type'] == 0 OR $_SESSION['type'] == 3){
+                  <?php if(($_SESSION['type'] == 0 OR $_SESSION['type'] == 3) && $row['status'] >= 0){
                      ?>
                     <td class="table-actions">
                         <a href="../doctors-desk/index.php?id=<?= $row['id'] ?>"> Attend Patient</a>

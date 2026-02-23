@@ -163,6 +163,16 @@ if($billingQ){
     }
 }
 
+}else if($purpose == 6){
+
+/* ---- CONSULTATION FEE ---- */
+$items[] = [
+    'name' => 'Consultation Fee',
+    'type' => 'Consultation',
+    'price' => $totalAmount
+];
+$total_amount = (float)$totalAmount;
+
 }
 
 

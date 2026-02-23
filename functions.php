@@ -422,6 +422,7 @@ function getPurpose($purpose){
      else  if($purpose == 3)return 'For Laboratory';
      else  if($purpose == 4)return 'For Admission';
      else  if($purpose == 5)return 'For Radiology';
+     else  if($purpose == 6)return 'Consultation Fee';
      else return 'Unknown';
 }
 
@@ -457,6 +458,7 @@ function get_purpose($status){
   else  if($status == 3)return 'Laboratory';
   else  if($status == 4)return 'Admission';
   else  if($status == 5)return 'Radiology';
+  else  if($status == 6)return 'Consultation';
 }
 
 function get_payment_status_badge($status){
