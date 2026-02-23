@@ -86,7 +86,8 @@ if ($user_type == 3) {
 $update = $db->query("
     UPDATE appointments
     SET status=2,
-        doctor_id='$user_id'
+        doctor_id='$user_id',
+        date_ended=NOW()
     WHERE id='$appointment_id'
 ");
 

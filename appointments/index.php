@@ -10,6 +10,18 @@ if (!isLoggedIn() || ($_SESSION['type'] != 0 AND $_SESSION['type'] != 5 AND $_SE
 $location = 'appointments';
 
 /* =========================
+   REVIEW WINDOW SETTINGS
+========================= */
+$review_window_days = 0;
+$consultation_fee = 0;
+$hwQ = $db->query("SELECT review_window_days, consultation_fee FROM hospital_details LIMIT 1");
+if ($hwQ && $hwQ->num_rows > 0) {
+    $hw = $hwQ->fetch_assoc();
+    $review_window_days = intval($hw['review_window_days']);
+    $consultation_fee = floatval($hw['consultation_fee']);
+}
+
+/* =========================
    FILTER & PAGINATION
 ========================= */
 $start_date = isset($_GET['start_date']) ? sanitize($_GET['start_date']) : '';
@@ -68,7 +80,7 @@ elseif (!empty($start_date) && !empty($end_date)) {
        $room_id = $roomInfo['room_id'];
 
        $where .=" AND a.room_id = '$room_id'";
-       $where .=" AND a.status = 1";
+       $where .=" AND (a.status = 1 OR a.status = 2)";
 
 
 
@@ -417,7 +429,9 @@ $appointments = $db->query($sql);
                             <span style="color:#c0392b;font-weight:600;">Pending Payment</span>
                         <?php elseif($row['status'] == 0): ?>
                             <span style="color:#e67e22;font-weight:600;">Active</span>
-                        <?php else: ?>
+                        <?php elseif($row['status'] == 1): ?>
+                            <span style="color:#2980b9;font-weight:600;">In Progress</span>
+                        <?php elseif($row['status'] == 2): ?>
                             <span style="color:#0a7a0a;font-weight:600;">Completed</span>
                         <?php endif; ?>
                     </td>
@@ -426,12 +440,36 @@ $appointments = $db->query($sql);
                         <a onclick="deleteAppointment(<?= $row['id'] ?>)"
                            class="delete-btn">Delete</a>
                     </td>
-                  <?php if(($_SESSION['type'] == 0 OR $_SESSION['type'] == 3) && $row['status'] >= 0){
-                     ?>
+                  <?php if(($_SESSION['type'] == 0 OR $_SESSION['type'] == 3) && ($row['status'] == 0 || $row['status'] == 1)): ?>
                     <td class="table-actions">
-                        <a href="../doctors-desk/index.php?id=<?= $row['id'] ?>"> Attend Patient</a>
+                        <a href="../doctors-desk/index.php?id=<?= $row['id'] ?>">Attend Patient</a>
                     </td>
-                  <?php } ?>
+                  <?php elseif(($_SESSION['type'] == 0 OR $_SESSION['type'] == 3) && $row['status'] == 2): ?>
+                    <td class="table-actions">
+                        <?php
+                        $needs_payment = false;
+                        if ($review_window_days > 0 && $consultation_fee > 0) {
+                            $ended = $row['date_ended'];
+                            if (!empty($ended)) {
+                                $ended_time = strtotime($ended);
+                            } else {
+                                $ended_time = strtotime($row['date_appointed']);
+                            }
+                            $days_since = floor((time() - $ended_time) / 86400);
+                            if ($days_since > $review_window_days) {
+                                $needs_payment = true;
+                            }
+                        }
+                        ?>
+                        <?php if ($needs_payment): ?>
+                            <a onclick="reviewRequiresPayment(<?= $row['id'] ?>)"
+                               style="background-color:#e67e22;border-color:#e67e22;cursor:pointer;">Review (Pay First)</a>
+                        <?php else: ?>
+                            <a href="../doctors-desk/index.php?id=<?= $row['id'] ?>"
+                               style="background-color:#2980b9;border-color:#2980b9;">Review</a>
+                        <?php endif; ?>
+                    </td>
+                  <?php endif; ?>
                  
                 </tr>
             <?php endwhile; ?>
@@ -475,6 +513,19 @@ function deleteAppointment(id) {
     }).then((ok) => {
         if (ok) {
             window.location.href = 'delete.php?id=' + id;
+        }
+    });
+}
+
+function reviewRequiresPayment(appointmentId) {
+    swal("Review Window Expired",
+         "The free review period has ended. The patient must pay the consultation fee again before the doctor can review.",
+         "warning",
+    {
+        buttons: ["Cancel", "Create Payment"]
+    }).then((ok) => {
+        if (ok) {
+            window.location.href = 'create_review_payment.php?appointment_id=' + appointmentId;
         }
     });
 }

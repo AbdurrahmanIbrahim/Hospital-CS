@@ -44,7 +44,7 @@ $appointment = $appointmentCheck->fetch_assoc();
 /* =========================
    CHECK APPOINTMENT STATUS
 ========================= */
-if ($appointment['status'] != 1) {
+if ($appointment['status'] != 1 && $appointment['status'] != 2) {
     $_SESSION['error'] = 'Appointment already closed';
     echo "<script>window.history.back()</script>";
     exit;

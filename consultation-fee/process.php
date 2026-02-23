@@ -15,9 +15,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 $id = intval($_POST['id'] ?? 0);
 $fee = floatval($_POST['consultation_fee'] ?? 0);
+$review_window_days = intval($_POST['review_window_days'] ?? 0);
 
 if ($fee < 0) {
     $_SESSION['error'] = 'Fee cannot be negative';
+    echo "<script>window.history.back()</script>";
+    exit;
+}
+
+if ($review_window_days < 0) {
+    $_SESSION['error'] = 'Review window cannot be negative';
     echo "<script>window.history.back()</script>";
     exit;
 }
@@ -28,12 +35,12 @@ if ($id <= 0) {
     exit;
 }
 
-$sql = "UPDATE hospital_details SET consultation_fee = '$fee' WHERE id = '$id'";
+$sql = "UPDATE hospital_details SET consultation_fee = '$fee', review_window_days = '$review_window_days' WHERE id = '$id'";
 
 if ($db->query($sql)) {
-    $_SESSION['success'] = 'Consultation fee updated successfully';
+    $_SESSION['success'] = 'Settings updated successfully';
 } else {
-    $_SESSION['error'] = 'Failed to update consultation fee';
+    $_SESSION['error'] = 'Failed to update settings';
 }
 
 header('Location: index.php');

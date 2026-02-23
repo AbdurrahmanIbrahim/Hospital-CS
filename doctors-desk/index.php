@@ -259,6 +259,7 @@ if($run) while ($row = $run->fetch_assoc()) $admission_history[] = $row;
                 </svg>
                 Back to Appointments
             </a>
+            <?php if($appointment['appointment_status'] != 2): ?>
             <a href="complete_consultation.php?appointment_id=<?=$appointment_id?>" class="btn-primary">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;">
                     <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
@@ -266,6 +267,7 @@ if($run) while ($row = $run->fetch_assoc()) $admission_history[] = $row;
                 </svg>
                 Complete Consultation
             </a>
+            <?php endif; ?>
             <?php
             $activeAdmission = getActiveAdmission($patient_id);
             if(!$activeAdmission): ?>
@@ -292,13 +294,13 @@ if($run) while ($row = $run->fetch_assoc()) $admission_history[] = $row;
                 <div class="card-header">
                     <h2>Patient Information</h2>
                     <div class="patient-status-badges">
-                        <?php if($appointment['appointment_status'] == 1){
-                             ?>
-                                 <span class="badge badge-primary">Active Consultation</span>
-                        <?php }else{
-                             ?>
-                                <span class="badge badge-warning">Follow-up Required</span>
-                        <?php } ?>
+                        <?php if($appointment['appointment_status'] == 1): ?>
+                            <span class="badge badge-primary">Active Consultation</span>
+                        <?php elseif($appointment['appointment_status'] == 2): ?>
+                            <span class="badge" style="background:#0a7a0a;color:white;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:600;">Review Mode</span>
+                        <?php else: ?>
+                            <span class="badge badge-warning">Follow-up Required</span>
+                        <?php endif; ?>
                     
                      
                     </div>
@@ -934,6 +936,7 @@ if($run) while ($row = $run->fetch_assoc()) $admission_history[] = $row;
                         <th>Diagnosis</th>
                         <th>Prescription / Drugs</th>
                         <th>Lab Tests</th>
+                        <th>Scans</th>
                         <th>Doctor</th>
                     </tr>
                 </thead>
@@ -952,7 +955,7 @@ if($run) while ($row = $run->fetch_assoc()) $admission_history[] = $row;
                         </td>
                         <td>
                             <div class="prescription-cell">
-                                <?php 
+                                <?php
                                 // Fetch drugs for this appointment
                                 $drugs = [];
                                 $sql = "
@@ -965,10 +968,10 @@ if($run) while ($row = $run->fetch_assoc()) $admission_history[] = $row;
                                 $run = $db->query($sql);
                                 while($row = $run->fetch_assoc()) $drugs[] = $row;
 
-                                foreach(array_slice($drugs, 0, 2) as $drug): 
+                                foreach(array_slice($drugs, 0, 2) as $drug):
                                 ?>
                                     <span class="drug-tag">
-                                        <?= htmlspecialchars($drug['drug_name']) ?> (<?= $drug['quantity'] ?>) - ₦<?= number_format($drug['amount']) ?>
+                                        <?= htmlspecialchars($drug['drug_name']) ?> (<?= $drug['quantity'] ?>) - &#8358;<?= number_format($drug['amount']) ?>
                                     </span>
                                 <?php endforeach; ?>
                                 <?php if(count($drugs) > 2): ?>
@@ -978,11 +981,11 @@ if($run) while ($row = $run->fetch_assoc()) $admission_history[] = $row;
                         </td>
                         <td>
                             <div class="lab-cell">
-                                <?php 
+                                <?php
                                 // Fetch lab tests for this appointment
                                 $tests = [];
                                 $sql = "
-                                    SELECT t.name AS test_name
+                                    SELECT t.name AS test_name, ptl.id AS testlist_id, ptl.status AS testlist_status
                                     FROM patient_test pt
                                     JOIN test_lists ptl ON pt.id = ptl.patient_test_id
                                     JOIN tests t ON ptl.test_id = t.id
@@ -991,9 +994,16 @@ if($run) while ($row = $run->fetch_assoc()) $admission_history[] = $row;
                                 $run = $db->query($sql);
                                 while($row = $run->fetch_assoc()) $tests[] = $row;
 
-                                foreach(array_slice($tests, 0, 2) as $test): 
+                                foreach(array_slice($tests, 0, 2) as $test):
                                 ?>
-                                    <span class="test-tag"><?= htmlspecialchars($test['test_name']) ?></span>
+                                    <?php if($test['testlist_status'] == 5 || $test['testlist_status'] == 7): ?>
+                                        <a href="../view-results/index.php?id=<?= $test['testlist_id'] + 1200 ?>"
+                                           class="test-tag" style="text-decoration:none;cursor:pointer;border-bottom:1px dashed #2563eb;color:#2563eb;">
+                                            <?= htmlspecialchars($test['test_name']) ?>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="test-tag"><?= htmlspecialchars($test['test_name']) ?></span>
+                                    <?php endif; ?>
                                 <?php endforeach; ?>
                                 <?php if(count($tests) > 2): ?>
                                     <span class="more-indicator">+<?= count($tests) - 2 ?> more</span>
@@ -1001,9 +1011,40 @@ if($run) while ($row = $run->fetch_assoc()) $admission_history[] = $row;
                             </div>
                         </td>
                         <td>
+                            <div class="scan-cell">
+                                <?php
+                                // Fetch scans for this appointment
+                                $hist_scans = [];
+                                $sql = "
+                                    SELECT s.name AS scan_name, sl.id AS scanlist_id, sl.status AS scan_status
+                                    FROM patient_scan ps
+                                    JOIN scan_lists sl ON ps.id = sl.patient_scan_id
+                                    JOIN scans s ON sl.scan_id = s.id
+                                    WHERE ps.appointment_id = {$prev['id']}
+                                ";
+                                $run = $db->query($sql);
+                                if($run) while($row = $run->fetch_assoc()) $hist_scans[] = $row;
+
+                                foreach(array_slice($hist_scans, 0, 2) as $hscan):
+                                ?>
+                                    <?php if($hscan['scan_status'] >= 4): ?>
+                                        <a href="../radiology/view_report.php?id=<?= $hscan['scanlist_id'] ?>"
+                                           class="test-tag" style="text-decoration:none;cursor:pointer;border-bottom:1px dashed #7c3aed;color:#7c3aed;">
+                                            <?= htmlspecialchars($hscan['scan_name']) ?>
+                                        </a>
+                                    <?php else: ?>
+                                        <span class="test-tag"><?= htmlspecialchars($hscan['scan_name']) ?></span>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                                <?php if(count($hist_scans) > 2): ?>
+                                    <span class="more-indicator">+<?= count($hist_scans) - 2 ?> more</span>
+                                <?php endif; ?>
+                            </div>
+                        </td>
+                        <td>
                             <div class="doctor-cell">
-                                <div class="doctor-avatar-small"><?= strtoupper(substr($prev['doctor_name'], 0, 2)) ?></div>
-                                <span><?= htmlspecialchars($prev['doctor_name']) ?></span>
+                                <div class="doctor-avatar-small"><?= strtoupper(substr($prev['doctor_name'] ?? '', 0, 2)) ?></div>
+                                <span><?= htmlspecialchars($prev['doctor_name'] ?? '-') ?></span>
                             </div>
                         </td>
                     </tr>

@@ -10,10 +10,11 @@ if (!isLoggedIn() || $_SESSION['type'] != 0) {
 $location = 'admin';
 
 // Fetch current consultation fee
-$sql = "SELECT id, consultation_fee FROM hospital_details LIMIT 1";
+$sql = "SELECT id, consultation_fee, review_window_days FROM hospital_details LIMIT 1";
 $run = $db->query($sql);
 $hospital = $run->fetch_assoc();
 $current_fee = $hospital ? floatval($hospital['consultation_fee']) : 0;
+$review_window = $hospital ? intval($hospital['review_window_days']) : 0;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -61,8 +62,27 @@ $current_fee = $hospital ? floatval($hospital['consultation_fee']) : 0;
                 </div>
             </div>
 
+            <div class="form-row" style="margin-top:20px;">
+                <div class="form-group">
+                    <label for="review_window_days">Review Window (Days)</label>
+                    <input type="number"
+                           id="review_window_days"
+                           name="review_window_days"
+                           step="1"
+                           min="0"
+                           value="<?= $review_window ?>"
+                           placeholder="Number of days for free review"
+                           required
+                           style="max-width:300px;">
+                    <p style="color:#888;font-size:13px;margin-top:6px;">
+                        Number of days after consultation ends during which the patient can return for review without paying again.
+                        Setting to <strong>0</strong> means unlimited review access (no re-payment required).
+                    </p>
+                </div>
+            </div>
+
             <div style="margin-top: 24px;">
-                <button type="submit" class="btn btn-primary">Save Consultation Fee</button>
+                <button type="submit" class="btn btn-primary">Save Settings</button>
             </div>
         </form>
 
