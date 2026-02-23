@@ -1923,6 +1923,7 @@ CREATE TABLE `scan_results` (
   `impression` text NOT NULL DEFAULT '',
   `recommendation` text NOT NULL DEFAULT '',
   `radiologist_id` int(11) NOT NULL,
+  `attachment` varchar(255) DEFAULT NULL,
   `created_at` datetime NOT NULL DEFAULT current_timestamp(),
   `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
   PRIMARY KEY (`id`),

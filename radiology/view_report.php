@@ -608,6 +608,26 @@ $date_released  = $scan['date_released'] ? date('d M Y', strtotime($scan['date_r
             </div>
             <?php endif; ?>
 
+            <?php if (!empty($result['attachment'])): ?>
+            <div class="report-section">
+                <div class="report-section-title">Attachment</div>
+                <div class="report-section-content" style="text-align:center;">
+                    <?php
+                        $att_ext = strtolower(pathinfo($result['attachment'], PATHINFO_EXTENSION));
+                        $att_url = '../images/scans/' . htmlspecialchars($result['attachment']);
+                    ?>
+                    <?php if (in_array($att_ext, ['jpg','jpeg','png','gif','webp'])): ?>
+                        <img src="<?= $att_url ?>" alt="Scan Image" style="max-width:100%;height:auto;border-radius:8px;border:1px solid #ddd;">
+                    <?php elseif ($att_ext === 'pdf'): ?>
+                        <embed src="<?= $att_url ?>" type="application/pdf" width="100%" height="600px" style="border-radius:8px;border:1px solid #ddd;">
+                        <br><a href="<?= $att_url ?>" target="_blank" style="display:inline-block;margin-top:10px;padding:8px 20px;background:#1565c0;color:white;border-radius:6px;text-decoration:none;font-weight:600;">Download PDF</a>
+                    <?php else: ?>
+                        <a href="<?= $att_url ?>" target="_blank" style="display:inline-block;padding:12px 24px;background:#1565c0;color:white;border-radius:6px;text-decoration:none;font-weight:600;">Download Attachment</a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
         <?php else: ?>
             <div style="text-align:center;padding:40px;color:#888;">
                 <p>No report has been uploaded yet.</p>

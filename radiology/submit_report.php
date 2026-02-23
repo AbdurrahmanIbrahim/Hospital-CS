@@ -42,6 +42,45 @@ if (empty($findings)) {
 }
 
 /* =========================
+   HANDLE FILE UPLOAD
+========================= */
+$attachment_filename = null;
+if (isset($_FILES['attachment']) && $_FILES['attachment']['error'] === UPLOAD_ERR_OK) {
+    $file = $_FILES['attachment'];
+    $max_size = 10 * 1024 * 1024; // 10MB
+
+    if ($file['size'] > $max_size) {
+        $_SESSION['error'] = 'File too large. Maximum size is 10MB.';
+        echo "<script>window.history.back()</script>";
+        exit;
+    }
+
+    $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'application/pdf', 'application/dicom'];
+    $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $allowed_exts = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'dcm'];
+
+    if (!in_array($ext, $allowed_exts)) {
+        $_SESSION['error'] = 'Invalid file type. Accepted: JPG, PNG, GIF, WebP, PDF, DCM.';
+        echo "<script>window.history.back()</script>";
+        exit;
+    }
+
+    $upload_dir = '../images/scans/';
+    if (!is_dir($upload_dir)) {
+        mkdir($upload_dir, 0755, true);
+    }
+
+    $attachment_filename = 'scan_' . $scan_list_id . '_' . time() . '.' . $ext;
+    $upload_path = $upload_dir . $attachment_filename;
+
+    if (!move_uploaded_file($file['tmp_name'], $upload_path)) {
+        $_SESSION['error'] = 'Failed to upload file. Please try again.';
+        echo "<script>window.history.back()</script>";
+        exit;
+    }
+}
+
+/* =========================
    VALIDATE SCAN LIST EXISTS
 ========================= */
 $sql = "SELECT id, status FROM scan_lists WHERE id = '$scan_list_id'";
@@ -56,12 +95,23 @@ if (!$run || $run->num_rows == 0) {
 /* =========================
    CHECK IF RESULT EXISTS
 ========================= */
-$sql = "SELECT id FROM scan_results WHERE scan_list_id = '$scan_list_id' LIMIT 1";
+$sql = "SELECT id, attachment FROM scan_results WHERE scan_list_id = '$scan_list_id' LIMIT 1";
 $run = $db->query($sql);
 
 if ($run && $run->num_rows > 0) {
     /* UPDATE EXISTING */
     $existing = $run->fetch_assoc();
+    $attachment_sql = '';
+    if ($attachment_filename) {
+        // Delete old attachment if exists
+        if (!empty($existing['attachment'])) {
+            $old_file = '../images/scans/' . $existing['attachment'];
+            if (file_exists($old_file)) {
+                unlink($old_file);
+            }
+        }
+        $attachment_sql = ", attachment = '$attachment_filename'";
+    }
     $sql = "UPDATE scan_results SET
                 clinical_info  = '$clinical_info',
                 findings       = '$findings',
@@ -69,6 +119,7 @@ if ($run && $run->num_rows > 0) {
                 recommendation = '$recommendation',
                 radiologist_id = '$radiologist_id',
                 updated_at     = NOW()
+                $attachment_sql
             WHERE id = '{$existing['id']}'";
 
     if (!$db->query($sql)) {
@@ -78,10 +129,12 @@ if ($run && $run->num_rows > 0) {
     }
 } else {
     /* INSERT NEW */
+    $att_col = $attachment_filename ? ', attachment' : '';
+    $att_val = $attachment_filename ? ", '$attachment_filename'" : '';
     $sql = "INSERT INTO scan_results
-                (scan_list_id, clinical_info, findings, impression, recommendation, radiologist_id, created_at, updated_at)
+                (scan_list_id, clinical_info, findings, impression, recommendation, radiologist_id, created_at, updated_at $att_col)
             VALUES
-                ('$scan_list_id', '$clinical_info', '$findings', '$impression', '$recommendation', '$radiologist_id', NOW(), NOW())";
+                ('$scan_list_id', '$clinical_info', '$findings', '$impression', '$recommendation', '$radiologist_id', NOW(), NOW() $att_val)";
 
     if (!$db->query($sql)) {
         $_SESSION['error'] = 'Failed to save report';

@@ -223,7 +223,7 @@ $recommendation = $existing_result ? $existing_result['recommendation'] : '';
         </div>
 
         <!-- REPORT FORM -->
-        <form method="POST" action="submit_report.php" class="report-form">
+        <form method="POST" action="submit_report.php" class="report-form" enctype="multipart/form-data">
             <input type="hidden" name="scan_list_id" value="<?= $scanlist_id ?>">
 
             <div class="form-group">
@@ -248,6 +248,23 @@ $recommendation = $existing_result ? $existing_result['recommendation'] : '';
                 <label for="recommendation">Recommendation</label>
                 <textarea name="recommendation" id="recommendation" rows="4"
                           placeholder="Enter recommendation..."><?= htmlspecialchars($recommendation) ?></textarea>
+            </div>
+
+            <div class="form-group">
+                <label for="attachment">Upload Scan Image / File</label>
+                <?php if ($existing_result && !empty($existing_result['attachment'])): ?>
+                    <div style="margin-bottom:10px;padding:10px;background:#e8f5e9;border-radius:6px;border:1px solid #c8e6c9;">
+                        <span style="color:#2e7d32;font-weight:600;">Current file:</span>
+                        <a href="../images/scans/<?= htmlspecialchars($existing_result['attachment']) ?>" target="_blank" style="color:#1565c0;text-decoration:underline;">
+                            <?= htmlspecialchars($existing_result['attachment']) ?>
+                        </a>
+                        <br><small style="color:#666;">Upload a new file to replace it, or leave empty to keep current file.</small>
+                    </div>
+                <?php endif; ?>
+                <input type="file" name="attachment" id="attachment" class="form-control"
+                       accept="image/*,.pdf,.dcm"
+                       style="padding:10px;border:2px dashed #ddd;border-radius:8px;background:#fafafa;cursor:pointer;">
+                <small style="color:#6c757d;display:block;margin-top:6px;">Accepted: Images (JPG, PNG, etc.), PDF, DICOM (.dcm). Max size: 10MB</small>
             </div>
 
             <div style="text-align:center;margin-top:20px;">
