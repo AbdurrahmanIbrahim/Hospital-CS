@@ -64,11 +64,12 @@ if (empty($start_date) && empty($end_date)) {
 ========================= */
 if (!empty($search)) {
     $where .= " AND (
-        t.name LIKE '%$search%' 
+        t.name LIKE '%$search%'
         OR ptl.labno LIKE '%$search%'
         OR u.name LIKE '%$search%'
         OR u.hospital_num LIKE '%$search%'
         OR u.phone LIKE '%$search%'
+        OR pay.note LIKE '%$search%'
     )";
 }
 
@@ -80,9 +81,10 @@ $countSql = "
     FROM patient_test pt
     JOIN test_lists ptl ON pt.id = ptl.patient_test_id
     JOIN tests t ON ptl.test_id = t.id
-    JOIN appointments a ON pt.appointment_id = a.id
-    JOIN users u ON a.patient_id = u.id
-    $where
+    LEFT JOIN appointments a ON pt.appointment_id = a.id AND pt.appointment_id > 0
+    LEFT JOIN users u ON u.id = IF(pt.appointment_id > 0, a.patient_id, pt.user_id)
+    LEFT JOIN payments pay ON pt.payment_id = pay.id
+    WHERE 1=1 $where
 ";
 
 $totalRows  = $db->query($countSql)->fetch_assoc()['total'];
@@ -92,7 +94,7 @@ $totalPages = ceil($totalRows / $limit);
    FETCH TEST RECORDS
 ========================= */
 $sql = "
-    SELECT 
+    SELECT
         pt.id            AS patient_test_id,
         pt.appointment_id,
         pt.user_id,
@@ -129,15 +131,18 @@ $sql = "
         u.hospital_num,
 
         a.date_appointed,
-        a.patient_id      AS patient_id
+        COALESCE(a.patient_id, pt.user_id) AS patient_id,
+
+        pay.note          AS payment_note
 
     FROM patient_test pt
     JOIN test_lists ptl ON pt.id = ptl.patient_test_id
     JOIN tests t ON ptl.test_id = t.id
-    JOIN appointments a ON pt.appointment_id = a.id
-    JOIN users u ON a.patient_id = u.id
+    LEFT JOIN appointments a ON pt.appointment_id = a.id AND pt.appointment_id > 0
+    LEFT JOIN users u ON u.id = IF(pt.appointment_id > 0, a.patient_id, pt.user_id)
+    LEFT JOIN payments pay ON pt.payment_id = pay.id
 
-    $where
+    WHERE 1=1 $where
     ORDER BY ptl.id DESC
     LIMIT $limit OFFSET $offset
 ";
@@ -613,13 +618,24 @@ $tests = $db->query($sql);
             <tr>
                 <td><?= $i++ ?></td>
 
-                <td><?= htmlspecialchars($row['patient_name']) ?></td>
+                <td>
+                    <?php if (!empty($row['patient_name'])): ?>
+                        <?= htmlspecialchars($row['patient_name']) ?>
+                    <?php elseif (!empty($row['payment_note'])): ?>
+                        <?= htmlspecialchars(str_replace('POS Walk-In: ', '', $row['payment_note'])) ?>
+                        <br><small style="color:#e67e22;font-weight:600;">(Walk-in)</small>
+                    <?php else: ?>
+                        -
+                    <?php endif; ?>
+                </td>
 
-                <td><?= htmlspecialchars($row['hospital_num']) ?></td>
+                <td><?= htmlspecialchars($row['hospital_num'] ?? '-') ?></td>
                       <td>
-                    <?= $row['date_appointed']
-                        ? date('d M Y', strtotime($row['date_appointed']))
-                        : '-' ?>
+                    <?php if ($row['appointment_id'] > 0 && $row['date_appointed']): ?>
+                        <?= date('d M Y', strtotime($row['date_appointed'])) ?>
+                    <?php else: ?>
+                        <span style="color:#6c757d;">POS</span>
+                    <?php endif; ?>
                 </td>
 
                 <td><?= htmlspecialchars($row['test_name']) ?></td>
