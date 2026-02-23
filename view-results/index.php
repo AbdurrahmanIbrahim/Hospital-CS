@@ -38,9 +38,10 @@ $location = 'lab';
     $date = '';
 
     $sql = "
-    SELECT a.patient_id
+    SELECT pt.user_id, pt.appointment_id, a.patient_id AS app_patient_id, a.doctor_id, pay.note AS payment_note
     FROM patient_test pt
-    JOIN appointments a ON pt.appointment_id = a.id
+    LEFT JOIN appointments a ON pt.appointment_id = a.id AND pt.appointment_id > 0
+    LEFT JOIN payments pay ON pt.payment_id = pay.id
     WHERE pt.id = '$patient_test'
     LIMIT 1
 ";
@@ -54,8 +55,13 @@ if ($run->num_rows == 0) {
 }
 
 $row = $run->fetch_assoc();
-$patient_id = $row['patient_id'];
-$dr_name = $test_info['dr_name'] ?? get("name","users",$row['doctor_id']);
+$patient_id = ($row['appointment_id'] > 0) ? $row['app_patient_id'] : $row['user_id'];
+$is_walkin = ($patient_id == 0);
+$walkin_name = '';
+if ($is_walkin && !empty($row['payment_note'])) {
+    $walkin_name = str_replace('POS Walk-In: ', '', $row['payment_note']);
+}
+$dr_name = $test_info['dr_name'] ?? ($row['doctor_id'] ? get("name","users",$row['doctor_id']) : 'POS');
 
 
 
@@ -1003,19 +1009,23 @@ $hospital = $run->fetch_assoc();
         <table class="medical-form-table">
             <tr>
                 <th>Name</th>
-                <td><?= get('name','users',$patient_id) ?></td>
+                <td><?= $is_walkin ? htmlspecialchars($walkin_name) . ' <small style="color:#e67e22;">(Walk-in)</small>' : get('name','users',$patient_id) ?></td>
                 <th>GSM</th>
-                <td><?= get('phone','users',$patient_id) ?></td>
+                <td><?= $is_walkin ? '-' : get('phone','users',$patient_id) ?></td>
                 <th>Sex / Age</th>
                 <td>
-                    <?= get('gender','users',$patient_id) == '1' ? 'Male' : 'Female' ?>
-                    / <?= get('age','users',$patient_id) ?>
+                    <?php if ($is_walkin): ?>
+                        -
+                    <?php else: ?>
+                        <?= get('gender','users',$patient_id) == '1' ? 'Male' : 'Female' ?>
+                        / <?= get('age','users',$patient_id) ?>
+                    <?php endif; ?>
                 </td>
             </tr>
 
             <tr>
                 <th>Hospital No</th>
-                <td><?=  get('hospital_num','users',$patient_id)  ?></td>
+                <td><?= $is_walkin ? '-' : get('hospital_num','users',$patient_id) ?></td>
                 <th>Lab No</th>
                 <td><?= $labno ?></td>
                 <th>Doctor</th>

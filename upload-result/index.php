@@ -127,9 +127,10 @@ while ($row = $run->fetch_assoc()) {
 
 
 $sql = "
-    SELECT a.patient_id
+    SELECT pt.user_id, pt.appointment_id, a.patient_id AS app_patient_id, pay.note AS payment_note
     FROM patient_test pt
-    JOIN appointments a ON pt.appointment_id = a.id
+    LEFT JOIN appointments a ON pt.appointment_id = a.id AND pt.appointment_id > 0
+    LEFT JOIN payments pay ON pt.payment_id = pay.id
     WHERE pt.id = '$patient_test'
     LIMIT 1
 ";
@@ -143,7 +144,12 @@ if ($run->num_rows == 0) {
 }
 
 $row = $run->fetch_assoc();
-$patient_id = $row['patient_id'];
+$patient_id = ($row['appointment_id'] > 0) ? $row['app_patient_id'] : $row['user_id'];
+$is_walkin = ($patient_id == 0);
+$walkin_name = '';
+if ($is_walkin && !empty($row['payment_note'])) {
+    $walkin_name = str_replace('POS Walk-In: ', '', $row['payment_note']);
+}
 
 
 ?>
@@ -406,11 +412,11 @@ $patient_id = $row['patient_id'];
                     <table class="table table-bordered table-sm mb-0">
                         <tr>
                             <th width="30%">Name</th>
-                            <td><?= get('name','users',$patient_id) ?></td>
+                            <td><?= $is_walkin ? htmlspecialchars($walkin_name) . ' <small style="color:#e67e22;font-weight:600;">(Walk-in)</small>' : get('name','users',$patient_id) ?></td>
                         </tr>
                         <tr>
                             <th>Email</th>
-                            <td><?= get('email','users',$patient_id) ?></td>
+                            <td><?= $is_walkin ? '-' : get('email','users',$patient_id) ?></td>
                         </tr>
                         <tr>
                             <th>Lab Number</th>
