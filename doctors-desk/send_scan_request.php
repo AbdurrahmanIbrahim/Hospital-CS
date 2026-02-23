@@ -63,19 +63,24 @@ if ($existing) {
 $amount_total = 0;
 foreach ($scans as $s) {
     $scan_id = intval($s['id']);
-    $price = $db->query("SELECT amount FROM scans WHERE id='$scan_id'")->fetch_assoc()['amount'] ?? 0;
-    $amount_total += $price;
+    $scanQ = $db->query("SELECT amount FROM scans WHERE id='$scan_id'");
+    if ($scanQ && $scanQ->num_rows > 0) {
+        $amount_total += floatval($scanQ->fetch_assoc()['amount']);
+    }
 }
 
 // Apply scheme discount
-$scheme = $db->query("
+$discount = 0;
+$schemeQ = $db->query("
     SELECT s.discount_fee
     FROM users u
-    JOIN schemes s ON s.id=u.scheme_type
-    WHERE u.id='$patient_id' AND s.status=1
-")->fetch_assoc();
-
-$discount = $scheme['discount_fee'] ?? 0;
+    LEFT JOIN schemes s ON s.id=u.scheme_type AND s.status=1
+    WHERE u.id='$patient_id'
+");
+if ($schemeQ && $schemeQ->num_rows > 0) {
+    $schemeRow = $schemeQ->fetch_assoc();
+    $discount = floatval($schemeRow['discount_fee'] ?? 0);
+}
 $discount_amount = ($amount_total * $discount) / 100;
 $net_amount = max(0, round($amount_total - $discount_amount, 2));
 
@@ -84,11 +89,11 @@ $receipt = generateReceiptNumber($db);
 $run = $db->query("
     INSERT INTO payments
     (patient_id, appointment_id, user_id, amount, discount, net_amount,
-     record_date, purpose, note, reciept_num, status)
+     record_date, purpose, note, reciept_num, status, `payment-method`, accountant_id)
     VALUES
     ('$patient_id','$appointment_id','$doctor_id',
      '$amount_total','$discount','$net_amount',
-     NOW(),5,'Radiology Scan Payment','$receipt',0)
+     NOW(),5,'Radiology Scan Payment','$receipt',0,'',0)
 ");
 
 if (!$run) {
@@ -110,7 +115,8 @@ $patient_scan_id = $db->insert_id;
 // Insert scan_lists
 foreach ($scans as $s) {
     $scan_id = intval($s['id']);
-    $scan_amount = $db->query("SELECT amount FROM scans WHERE id='$scan_id'")->fetch_assoc()['amount'] ?? 0;
+    $scanAmtQ = $db->query("SELECT amount FROM scans WHERE id='$scan_id'");
+    $scan_amount = ($scanAmtQ && $scanAmtQ->num_rows > 0) ? floatval($scanAmtQ->fetch_assoc()['amount']) : 0;
     $db->query("
         INSERT INTO scan_lists
         (patient_scan_id, scan_id, asker_id, status, date_request, amount)
